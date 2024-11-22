@@ -4,8 +4,8 @@ import dts from "vite-plugin-dts";
 export default defineConfig({
   build: {
     lib: {
-      entry: "./src/index.ts",
-      name: "FBox",
+      entry: "./src/main.ts",
+      name: "f-box",
       fileName: (format) => `index.${format}.js`,
     },
     rollupOptions: {
