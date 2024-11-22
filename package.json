@@ -1,0 +1,46 @@
+{
+  "name": "f-box",
+  "version": "0.1.0",
+  "description": "Put your data in a box, and suddenly it's easier to handle, transform, and use however you need.",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "lint": "tsc --noEmit",
+    "test": "vitest",
+    "coverage": "vitest run --coverage"
+  },
+  "keywords": [
+    "typescript",
+    "monad",
+    "box",
+    "library"
+  ],
+  "author": "Kentaro Morishita",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourname/f-box"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.1",
+    "@vitest/coverage-v8": "^2.1.5",
+    "typescript": "~5.6.3",
+    "vite": "^5.4.9",
+    "vite-plugin-dts": "^4.3.0",
+    "vitest": "^2.1.5"
+  }
+}
