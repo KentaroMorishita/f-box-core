@@ -1,22 +1,118 @@
+/**
+ * A function that observes changes in the value of an RBox.
+ * RBox の値の変化を監視するための関数。
+ */
 export type Observer<T> = (value: T) => void;
 
+/**
+ * A Reactive Box type (RBox) that encapsulates a value, supports reactive updates, and provides methods to manipulate it.
+ * 値を包み込み、リアクティブな更新をサポートし、操作するためのメソッドを提供する RBox 型。
+ */
 export type RBox<T> = {
-  readonly isRBox: true;
+  readonly isRBox: true; // Identifies the object as an RBox. / オブジェクトが RBox であることを識別。
+
+  /**
+   * Gets the value inside the RBox.
+   * RBox 内の値を取得します。
+   */
   readonly getValue: () => T;
+
+  /**
+   * Updates the value inside the RBox and notifies all subscribers.
+   * RBox 内の値を更新し、すべての購読者に通知します。
+   * @param fn - A function to update the value. / 値を更新する関数。
+   */
   readonly setValue: (fn: (value: T) => T) => void;
+
+  /**
+   * Applies a function to the value inside the RBox and returns a new derived RBox.
+   * RBox 内の値に関数を適用し、新しい派生 RBox を返します。
+   * @param fn - A function to apply to the RBox value. / RBox の値に適用する関数。
+   */
   readonly map: <U>(fn: (value: T) => U) => RBox<U>;
-  readonly apply: <A, B>(this: RBox<(a: A) => B>, boxValue: RBox<A>) => RBox<B>;
-  readonly flatMap: <U>(fn: (value: T) => RBox<U>) => RBox<U>;
+
+  /**
+   * Applies a function to the value inside the RBox and returns a new derived RBox.
+   * Alias for `map`.
+   * RBox 内の値に関数を適用し、新しい派生 RBox を返します。
+   * `map` のエイリアス。
+   * @param fn - A function to apply to the RBox value. / RBox の値に適用する関数。
+   */
   readonly "<$>": <U>(fn: (value: T) => U) => RBox<U>;
+
+  /**
+   * Applies a boxed function to a boxed value and returns a new derived RBox.
+   * RBox に包まれた関数を別の RBox に適用し、新しい派生 RBox を返します。
+   * @param boxValue - An RBox containing a value to apply the function to.
+   *                   / 関数を適用する値を含む RBox。
+   */
+  readonly apply: <A, B>(this: RBox<(a: A) => B>, boxValue: RBox<A>) => RBox<B>;
+
+  /**
+   * Applies a boxed function to a boxed value and returns a new derived RBox.
+   * Alias for `apply`.
+   * RBox に包まれた関数を別の RBox に適用し、新しい派生 RBox を返します。
+   * `apply` のエイリアス。
+   * @param boxValue - An RBox containing a value to apply the function to.
+   *                   / 関数を適用する値を含む RBox。
+   */
   readonly "<*>": <A, B>(this: RBox<(a: A) => B>, boxValue: RBox<A>) => RBox<B>;
+
+  /**
+   * Applies a function that returns an RBox to the value inside this RBox and flattens the result.
+   * RBox 内の値に RBox を返す関数を適用し、その結果を平坦化して返します。
+   * @param fn - A function that returns an RBox. / RBox を返す関数。
+   */
+  readonly flatMap: <U>(fn: (value: T) => RBox<U>) => RBox<U>;
+
+  /**
+   * Applies a function that returns an RBox to the value inside this RBox and flattens the result.
+   * Alias for `flatMap`.
+   * RBox 内の値に RBox を返す関数を適用し、その結果を平坦化して返します。
+   * `flatMap` のエイリアス。
+   * @param fn - A function that returns an RBox. / RBox を返す関数。
+   */
   readonly ">>=": <U>(fn: (value: T) => RBox<U>) => RBox<U>;
+
+  /**
+   * Subscribes to updates of the RBox value.
+   * RBox の値の更新を購読します。
+   * @param observer - A function to handle updates. / 更新を処理する関数。
+   * @returns A unique key to identify the subscription. / 購読を識別するための一意のキー。
+   */
   readonly subscribe: (observer: Observer<T>) => string;
+
+  /**
+   * Unsubscribes from updates using the subscription key.
+   * 購読キーを使用して更新の購読を解除します。
+   * @param key - The subscription key. / 購読キー。
+   */
   readonly unsubscribe: (key: string) => void;
+
+  /**
+   * Unsubscribes all observers from this RBox.
+   * この RBox に登録されたすべての購読者を解除します。
+   */
   readonly unsubscribeAll: () => void;
+
+  /**
+   * Detaches the RBox from all dependencies and stops updates to derived RBoxes.
+   * RBox をすべての依存関係から切り離し、派生 RBox への更新を停止します。
+   */
   readonly detach: () => void;
+
+  /**
+   * A collection of handlers to call when detaching.
+   * Detach 時に呼び出すハンドラーのコレクション。
+   */
   readonly detachHandlers: (() => void)[];
 };
 
+/**
+ * Creates a new RBox with an initial value.
+ * 初期値を持つ新しい RBox を作成します。
+ * @param initialValue - The initial value for the RBox. / RBox の初期値。
+ */
 const rbox = <T>(initialValue: T): RBox<T> => {
   let value: T = initialValue;
   const observers: Map<string, Observer<T>> = new Map();
@@ -129,14 +225,29 @@ const rbox = <T>(initialValue: T): RBox<T> => {
   };
 };
 
+/**
+ * Updates the value of an RBox directly.
+ * RBox の値を直接更新します。
+ * @param box - The RBox to update. / 更新する RBox。
+ * @returns A function to set the value. / 値を設定する関数を返します。
+ */
 export const set =
   <T>(box: RBox<T>) =>
   (value: T) =>
     box.setValue(() => value);
 
+/**
+ * Checks if the given value is an RBox.
+ * 指定された値が RBox かどうかを判定します。
+ * @param value - The value to check. / 判定する値。
+ */
 const isRBox = <T>(value: any): value is RBox<T> =>
   value && typeof value === "object" && (value as RBox<T>).isRBox === true;
 
+/**
+ * RBox utility object containing helpers like `pack`, `set`, and `isRBox`.
+ * `pack`、`set`、`isRBox` を含む RBox ユーティリティオブジェクト。
+ */
 export const RBox = {
   pack: rbox,
   set,

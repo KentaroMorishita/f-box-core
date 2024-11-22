@@ -134,4 +134,51 @@ describe("Box laws", () => {
       );
     });
   });
+
+  /**
+   * 特殊ケースのテスト。
+   * 1. map に例外をスローする関数を渡した場合、例外が正しく伝播されることを確認。
+   * 2. apply に例外をスローする関数を含む Box を渡した場合、例外が正しく伝播されることを確認。
+   * 3. flatMap に例外をスローする関数を渡した場合、例外が正しく伝播されることを確認。
+   */
+  describe("Edge case handling", () => {
+    test("map propagates thrown errors", () => {
+      const throwingFunc = () => {
+        throw new Error("Test error");
+      };
+
+      const initialBox = Box.pack(42);
+
+      // map に例外をスローする関数を渡す
+      expect(() => initialBox["<$>"](throwingFunc).getValue()).toThrowError(
+        "Test error"
+      );
+    });
+
+    test("apply propagates errors from boxed function", () => {
+      const throwingFuncBox = Box.pack(() => {
+        throw new Error("Function error");
+      });
+
+      const valueBox = Box.pack(42);
+
+      // apply に例外をスローする関数を含む Box を渡す
+      expect(() => throwingFuncBox["<*>"](valueBox).getValue()).toThrowError(
+        "Function error"
+      );
+    });
+
+    test("flatMap propagates thrown errors", () => {
+      const throwingFlatMap = () => {
+        throw new Error("FlatMap error");
+      };
+
+      const initialBox = Box.pack(42);
+
+      // flatMap に例外をスローする関数を渡す
+      expect(() => initialBox[">>="](throwingFlatMap).getValue()).toThrowError(
+        "FlatMap error"
+      );
+    });
+  });
 });
