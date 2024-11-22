@@ -1,3 +1,5 @@
+import { J } from "vitest/dist/chunks/environment.LoooBwUu";
+
 /**
  * Represents a value that might be absent (null, undefined, or void).
  * 値が存在しない可能性を示します（null, undefined, または void）。
@@ -39,7 +41,10 @@ export type Just<T> = {
    * @param boxValue - A `Maybe` containing a value to apply the function to.
    *                   / 関数を適用する値を含む `Maybe`。
    */
-  readonly apply: <A>(this: Just<(a: A) => T>, boxValue: Maybe<A>) => Maybe<T>;
+  readonly apply: <A, B>(
+    this: Maybe<(a: A) => B>,
+    boxValue: Maybe<A>
+  ) => Maybe<B>;
 
   /**
    * Applies a boxed function to the value inside the `Just` and returns a new `Maybe`.
@@ -49,7 +54,10 @@ export type Just<T> = {
    * @param boxValue - A `Maybe` containing a value to apply the function to.
    *                   / 関数を適用する値を含む `Maybe`。
    */
-  readonly "<*>": <A>(this: Just<(a: A) => T>, boxValue: Maybe<A>) => Maybe<T>;
+  readonly "<*>": <A, B>(
+    this: Maybe<(a: A) => B>,
+    boxValue: Maybe<A>
+  ) => Maybe<B>;
 
   /**
    * Applies a function that returns a `Maybe` to the value inside this `Just` and flattens the result.
@@ -111,8 +119,10 @@ export type Nothing = {
   readonly map: <U>(_fn: (value: any) => U) => Nothing;
 
   /**
-   * Alias for `map`. Returns itself since there is no value.
-   * `map` のエイリアス。値が存在しないため、自身をそのまま返します。
+   * Returns itself since there is no value.
+   * Alias for `map`.
+   * 値が存在しないため、自身をそのまま返します。
+   * `map` のエイリアス。
    * @param _fn - Ignored function. / 無視される関数。
    */
   readonly "<$>": <U>(_fn: (value: any) => U) => Nothing;
@@ -120,18 +130,26 @@ export type Nothing = {
   /**
    * Returns itself since there is no value to apply.
    * 値が存在しないため、自身をそのまま返します。
-   * @param _this - Ignored boxed function. / 無視される関数。
-   * @param _boxValue - Ignored boxed value. / 無視される値。
+   * @param this - Ignored boxed function. / 無視される関数。
+   * @param boxValue - Ignored boxed value. / 無視される値。
    */
-  readonly apply: <A>(_this: Nothing, _boxValue: Maybe<A>) => Nothing;
+  readonly apply: <A, B>(
+    this: Maybe<(a: A) => B>,
+    boxValue: Maybe<A>
+  ) => Maybe<B>;
 
   /**
-   * Alias for `apply`. Returns itself since there is no value to apply.
-   * `apply` のエイリアス。値が存在しないため、自身をそのまま返します。
-   * @param _this - Ignored boxed function. / 無視される関数。
-   * @param _boxValue - Ignored boxed value. / 無視される値。
+   * Returns itself since there is no value to apply.
+   * Alias for `apply`.
+   * 値が存在しないため、自身をそのまま返します。
+   * `apply` のエイリアス。
+   * @param this - Ignored boxed function. / 無視される関数。
+   * @param boxValue - Ignored boxed value. / 無視される値。
    */
-  readonly "<*>": <A>(_this: Nothing, _boxValue: Maybe<A>) => Nothing;
+  readonly "<*>": <A, B>(
+    this: Maybe<(a: A) => B>,
+    boxValue: Maybe<A>
+  ) => Maybe<B>;
 
   /**
    * Returns itself since there is no value to flatMap.
@@ -141,8 +159,10 @@ export type Nothing = {
   readonly flatMap: <U>(_fn: (value: any) => Maybe<U>) => Nothing;
 
   /**
-   * Alias for `flatMap`. Returns itself since there is no value.
-   * `flatMap` のエイリアス。値が存在しないため、自身をそのまま返します。
+   * Returns itself since there is no value to flatMap.
+   * Alias for `flatMap`.
+   * 値が存在しないため、自身をそのまま返します。
+   * `flatMap` のエイリアス。
    * @param _fn - Ignored function. / 無視される関数。
    */
   readonly ">>=": <U>(_fn: (value: any) => Maybe<U>) => Nothing;
@@ -220,12 +240,16 @@ const nothing = (): Nothing => nothingSigleton;
  */
 const just = <T>(value: NonNullable<T>): Just<T> => {
   const map = <U>(fn: (value: T) => U): Maybe<U> => maybe(fn(value));
-  const apply = function <A>(
-    this: Just<(a: A) => T>,
+  const apply = function <A, B>(
+    this: Just<(a: A) => B>,
     boxValue: Maybe<A>
-  ): Maybe<T> {
+  ): Maybe<B> {
+    if (isNothing(boxValue)) {
+      return nothing();
+    }
+
     const fn = this.getValue();
-    return isNothing(boxValue) ? nothing() : boxValue.map(fn);
+    return boxValue.map((a) => fn(a));
   };
 
   const flatMap = <U>(fn: (value: T) => Maybe<U>): Maybe<U> => fn(value);
