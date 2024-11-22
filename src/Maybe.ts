@@ -1,5 +1,3 @@
-import { J } from "vitest/dist/chunks/environment.LoooBwUu";
-
 /**
  * Represents a value that might be absent (null, undefined, or void).
  * 値が存在しない可能性を示します（null, undefined, または void）。
@@ -241,10 +239,10 @@ const nothing = (): Nothing => nothingSigleton;
 const just = <T>(value: NonNullable<T>): Just<T> => {
   const map = <U>(fn: (value: T) => U): Maybe<U> => maybe(fn(value));
   const apply = function <A, B>(
-    this: Just<(a: A) => B>,
+    this: Maybe<(a: A) => B>,
     boxValue: Maybe<A>
   ): Maybe<B> {
-    if (isNothing(boxValue)) {
+    if (isNothing(this) || isNothing(boxValue)) {
       return nothing();
     }
 

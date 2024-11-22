@@ -36,20 +36,26 @@ export type Left<L> = {
   /**
    * Ignores the provided function and boxed value, returning itself since there is no valid value.
    * 指定された関数とボックス化された値を無視し、有効な値が存在しないため自身を返します。
-   * @param _this - Ignored boxed function. / 無視されるボックス化された関数。
-   * @param _boxValue - Ignored boxed value. / 無視されるボックス化された値。
+   * @param this - Ignored boxed function. / 無視されるボックス化された関数。
+   * @param boxValue - Ignored boxed value. / 無視されるボックス化された値。
    */
-  readonly apply: <A>(_this: Left<L>, _boxValue: Either<L, A>) => Left<L>;
+  readonly apply: <A, B>(
+    this: Either<L, (a: A) => B>,
+    boxValue: Either<L, A>
+  ) => Either<L, B>;
 
   /**
    * Ignores the provided function and boxed value, returning itself since there is no valid value.
    * Alias for `apply`.
    * 指定された関数とボックス化された値を無視し、有効な値が存在しないため自身を返します。
    * `apply` のエイリアス。
-   * @param _this - Ignored boxed function. / 無視されるボックス化された関数。
-   * @param _boxValue - Ignored boxed value. / 無視されるボックス化された値。
+   * @param this - Ignored boxed function. / 無視されるボックス化された関数。
+   * @param boxValue - Ignored boxed value. / 無視されるボックス化された値。
    */
-  readonly "<*>": <A>(_this: Left<L>, _boxValue: Either<L, A>) => Left<L>;
+  readonly "<*>": <A, B>(
+    this: Either<L, (a: A) => B>,
+    boxValue: Either<L, A>
+  ) => Either<L, B>;
 
   /**
    * Ignores the provided function, returning itself since there is no valid value.
@@ -127,10 +133,10 @@ export type Right<L, R> = {
    * `Right` に包まれた関数を別の `Either` に適用し、新しい `Either` を返します。
    * @param boxValue - A boxed value to apply the function to. / 関数を適用する値を含むボックス。
    */
-  readonly apply: <A>(
-    this: Right<L, (a: A) => R>,
+  readonly apply: <A, B>(
+    this: Either<L, (a: A) => B>,
     boxValue: Either<L, A>
-  ) => Either<L, R>;
+  ) => Either<L, B>;
 
   /**
    * Applies a boxed function to the value inside the `Right` and returns a new `Either`.
@@ -139,10 +145,10 @@ export type Right<L, R> = {
    * `apply` のエイリアス。
    * @param boxValue - A boxed value to apply the function to. / 関数を適用する値を含むボックス。
    */
-  readonly "<*>": <A>(
-    this: Right<L, (a: A) => R>,
+  readonly "<*>": <A, B>(
+    this: Either<L, (a: A) => B>,
     boxValue: Either<L, A>
-  ) => Either<L, R>;
+  ) => Either<L, B>;
 
   /**
    * Applies a function that returns an `Either` to the value inside this `Right` and flattens the result.
@@ -216,12 +222,16 @@ const left = <L>(value: L): Left<L> =>
  */
 const right = <L, R>(value: R): Right<L, R> => {
   const map = <U>(fn: (value: R) => U): Either<L, U> => right(fn(value));
-  const apply = function <A>(
-    this: Right<L, (a: A) => R>,
+  const apply = function <A, B>(
+    this: Either<L, (a: A) => B>,
     boxValue: Either<L, A>
-  ): Either<L, R> {
+  ): Either<L, B> {
+    if (isLeft(this) || isLeft(boxValue)) {
+      return boxValue as Left<L>;
+    }
+
     const fn = this.getValue();
-    return isLeft(boxValue) ? boxValue : boxValue.map(fn);
+    return boxValue.map((a) => fn(a));
   };
   const flatMap = <U>(fn: (value: R) => Either<L, U>): Either<L, U> =>
     fn(value);
