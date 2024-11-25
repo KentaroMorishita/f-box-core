@@ -6,11 +6,11 @@ export default defineConfig({
     lib: {
       entry: "./src/main.ts",
       name: "f-box-core",
+      formats: ["es", "umd", "cjs"],
       fileName: (format) => {
         if (format === "es") return "index.mjs";
         if (format === "umd") return "index.js";
         if (format === "cjs") return "index.cjs";
-        return `index.${format}.js`;
         return `index.${format}.js`;
       },
     },
