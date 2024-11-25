@@ -4,7 +4,7 @@
   "description": "Put your data in a box, and suddenly it's easier to handle, transform, and use however you need.",
   "type": "module",
   "files": [
-    "dist/src",
+    "dist/types",
     "dist/index.*"
   ],
   "main": "./dist/index.js",
