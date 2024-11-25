@@ -9,6 +9,8 @@ export default defineConfig({
       fileName: (format) => {
         if (format === "es") return "index.mjs";
         if (format === "umd") return "index.js";
+        if (format === "cjs") return "index.cjs";
+        return `index.${format}.js`;
         return `index.${format}.js`;
       },
     },

@@ -14,7 +14,7 @@
     ".": {
       "types": "./dist/types/main.d.ts",
       "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "require": "./dist/index.cjs"
     }
   },
   "scripts": {
