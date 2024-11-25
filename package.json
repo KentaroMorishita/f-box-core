@@ -4,14 +4,15 @@
   "description": "Put your data in a box, and suddenly it's easier to handle, transform, and use however you need.",
   "type": "module",
   "files": [
-    "dist"
+    "dist/src",
+    "dist/index.*"
   ],
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
+  "types": "./dist/src/main.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/src/main.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     }

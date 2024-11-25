@@ -5,16 +5,18 @@ export default defineConfig({
   build: {
     lib: {
       entry: "./src/main.ts",
-      name: "f-box",
-      fileName: (format) => `index.${format}.js`,
-    },
-    rollupOptions: {
-      external: [],
+      name: "f-box-core",
+      fileName: (format) => {
+        if (format === "es") return "index.mjs";
+        if (format === "umd") return "index.js";
+        return `index.${format}.js`;
+      },
     },
   },
   plugins: [
     dts({
-      outDir: "dist",
+      outDir: "dist/types",
+      exclude: ["tests/**/*"],
     }),
   ],
 });
