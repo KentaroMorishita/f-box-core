@@ -31,8 +31,18 @@
   },
   "keywords": [
     "typescript",
+    "functional-programming",
+    "functor",
+    "applicative",
     "monad",
+    "maybe",
+    "either",
+    "task",
+    "async",
     "box",
+    "reactive",
+    "reactive-programming",
+    "state-management",
     "library"
   ],
   "author": "Kentaro Morishita",
