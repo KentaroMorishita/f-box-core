@@ -9,10 +9,10 @@
   ],
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
-  "types": "./dist/src/main.d.ts",
+  "types": "./dist/types/main.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/src/main.d.ts",
+      "types": "./dist/types/main.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     }
