@@ -87,11 +87,29 @@ export type Just<T> = {
   readonly orElse: (defaultValue: Maybe<T>) => Maybe<T>;
 
   /**
+   * Returns the current `Just` if present, or the given default value.
+   * Alias for `orElse`.
+   * 現在の `Just` が存在すればそれを返し、存在しなければ指定されたデフォルト値を返します。
+   * `orElse` のエイリアス。
+   * @param defaultValue - The default `Maybe` to return if absent. / 存在しない場合に返すデフォルトの `Maybe`。
+   */
+  readonly "<?>": (defaultValue: Maybe<T>) => Maybe<T>;
+
+  /**
    * Returns the value inside the `Just`, or a provided default value if absent.
    * `Just` 内の値を返し、存在しなければ指定されたデフォルト値を返します。
    * @param defaultValue - The default value to return if absent. / 存在しない場合に返すデフォルト値。
    */
   readonly getOrElse: <U>(defaultValue: U) => T | U;
+
+  /**
+   * Returns the value inside the `Just`, or a provided default value if absent.
+   * Alias for `getOrElse`.
+   * `Just` 内の値を返し、存在しなければ指定されたデフォルト値を返します。
+   * `getOrElse` のエイリアス。
+   * @param defaultValue - The default value to return if absent. / 存在しない場合に返すデフォルト値。
+   */
+  readonly "<|>": <U>(defaultValue: U) => T | U;
 
   /**
    * Matches the `Just` or `Nothing` case and applies the corresponding function.
@@ -179,11 +197,29 @@ export type Nothing = {
   readonly orElse: <U>(defaultValue: Maybe<U>) => Maybe<U>;
 
   /**
+   * Returns the provided default value.
+   * Alias for `orElse`.
+   * 指定されたデフォルト値を返します。
+   * `orElse` のエイリアス。
+   * @param defaultValue - The default value to return. / 返すデフォルト値。
+   */
+  readonly "<?>": <U>(defaultValue: Maybe<U>) => Maybe<U>;
+
+  /**
    * Returns the provided default value since there is no value.
    * 値が存在しないため、指定されたデフォルト値を返します。
    * @param defaultValue - The default value to return. / 返すデフォルト値。
    */
   readonly getOrElse: <U>(defaultValue: U) => U;
+
+  /**
+   * Returns the provided default value since there is no value.
+   * Alias for `getOrElse`.
+   * 値が存在しないため、指定されたデフォルト値を返します。
+   * `getOrElse` のエイリアス。
+   * @param defaultValue - The default value to return. / 返すデフォルト値。
+   */
+  readonly "<|>": <U>(defaultValue: U) => U;
 
   /**
    * Applies the `onNothing` function since there is no value.
@@ -210,6 +246,8 @@ const nothingSigleton: Nothing = {
   "<$>": () => nothingSigleton,
   "<*>": () => nothingSigleton,
   ">>=": () => nothingSigleton,
+  "<?>": <U>(defaultValue: Maybe<U>): Maybe<U> => defaultValue,
+  "<|>": <U>(defaultValue: U): U => defaultValue
 } as const;
 
 /**
@@ -269,6 +307,8 @@ const just = <T>(value: NonNullable<T>): Just<T> => {
     "<$>": map,
     "<*>": apply,
     ">>=": flatMap,
+    "<?>": orElse,
+    "<|>": getOrElse,
   } as const;
 };
 

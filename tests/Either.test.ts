@@ -140,4 +140,38 @@ describe("Either laws", () => {
       expect(left[">>="](f).getValue()).toBe(left.getValue());
     });
   });
+
+  describe("Either orElse and getOrElse", () => {
+    test("<?> (orElse alias) with Right", () => {
+      const right = Either.right<string, number>(42);
+      const fallback = Either.right<string, number>(99);
+
+      // `<?>` (orElse alias) should return the current Right
+      expect(right["<?>"](fallback).getValue()).toBe(42);
+    });
+
+    test("<?> (orElse alias) with Left", () => {
+      const left = Either.left<string>("Error");
+      const fallback = Either.right<string, number>(99);
+
+      // `<?>` (orElse alias) should return the fallback for Left
+      expect(left["<?>"](fallback).getValue()).toBe(99);
+    });
+
+    test("<|> (getOrElse alias) with Right", () => {
+      const right = Either.right<string, number>(42);
+      const fallback = 99;
+
+      // `<|>` (getOrElse alias) should return the value inside Right
+      expect(right["<|>"](fallback)).toBe(42);
+    });
+
+    test("<|> (getOrElse alias) with Left", () => {
+      const left = Either.left<string>("Error");
+      const fallback = 99;
+
+      // `<|>` (getOrElse alias) should return the fallback for Left
+      expect(left["<|>"](fallback)).toBe(99);
+    });
+  });
 });

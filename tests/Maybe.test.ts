@@ -180,4 +180,38 @@ describe("Maybe laws and behavior", () => {
       ).toBe("Nothing");
     });
   });
+
+  describe("Maybe orElse and getOrElse", () => {
+    test("<?> (orElse alias) with Just", () => {
+      const just = Maybe.just<number>(42);
+      const fallback = Maybe.just<number>(99);
+
+      // `<?>` (orElse alias) should return the current Just
+      expect(just["<?>"](fallback).getValue()).toBe(42);
+    });
+
+    test("<?> (orElse alias) with Nothing", () => {
+      const nothing = Maybe.nothing();
+      const fallback = Maybe.just(99);
+
+      // `<?>` (orElse alias) should return the fallback for Nothing
+      expect(nothing["<?>"](fallback).getValue()).toBe(99);
+    });
+
+    test("<|> (getOrElse alias) with Just", () => {
+      const just = Maybe.just(42);
+      const fallback = 99;
+
+      // `<|>` (getOrElse alias) should return the value inside Just
+      expect(just["<|>"](fallback)).toBe(42);
+    });
+
+    test("<|> (getOrElse alias) with Nothing", () => {
+      const nothing = Maybe.nothing();
+      const fallback = 99;
+
+      // `<|>` (getOrElse alias) should return the fallback for Nothing
+      expect(nothing["<|>"](fallback)).toBe(99);
+    });
+  });
 });

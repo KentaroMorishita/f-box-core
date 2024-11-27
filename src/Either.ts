@@ -88,10 +88,28 @@ export type Left<L> = {
 
   /**
    * Returns the provided default value since this represents an invalid result.
+   * Alias for `orElse`.
+   * 無効な結果を表しているため、指定されたデフォルト値を返します。
+   * `orElse` のエイリアス。
+   * @param defaultValue - The default value to return. / 返すデフォルト値。
+   */
+  readonly "<?>": <U>(defaultValue: Either<L, U>) => Either<L, U>;
+
+  /**
+   * Returns the provided default value since this represents an invalid result.
    * 無効な結果を表しているため、指定されたデフォルト値を返します。
    * @param defaultValue - The default value to return. / 返すデフォルト値。
    */
   readonly getOrElse: <U>(defaultValue: U) => U;
+
+  /**
+   * Returns the provided default value since this represents an invalid result.
+   * Alias for `getOrElse`.
+   * 無効な結果を表しているため、指定されたデフォルト値を返します。
+   * `getOrElse` のエイリアス。
+   * @param defaultValue - The default value to return. / 返すデフォルト値。
+   */
+  readonly "<|>": <U>(defaultValue: U) => U;
 
   /**
    * Matches the `Left` case and applies the corresponding function.
@@ -180,11 +198,29 @@ export type Right<L, R> = {
   readonly orElse: (defaultValue: Either<L, R>) => Either<L, R>;
 
   /**
+   * Returns the current `Right` since it represents a valid result.
+   * Alias for `orElse`.
+   * 有効な結果を表しているため、現在の `Right` を返します。
+   * `orElse` のエイリアス。
+   * @param defaultValue - Ignored value. / 無視される値。
+   */
+  readonly "<?>": (defaultValue: Either<L, R>) => Either<L, R>;
+
+  /**
    * Returns the value inside the `Right`, ignoring the provided default value.
    * `Right` 内の値を返し、指定されたデフォルト値は無視されます。
    * @param defaultValue - Ignored value. / 無視される値。
    */
   readonly getOrElse: (defaultValue: R) => R;
+
+  /**
+   * Returns the value inside the `Right`, ignoring the provided default value.
+   * Alias for `getOrElse`.
+   * `Right` 内の値を返し、指定されたデフォルト値は無視されます。
+   * `getOrElse` のエイリアス。
+   * @param defaultValue - Ignored value. / 無視される値。
+   */
+  readonly "<|>": (defaultValue: R) => R;
 
   /**
    * Matches the `Right` case and applies the corresponding function.
@@ -213,6 +249,8 @@ const left = <L>(value: L): Left<L> =>
     "<$>": () => left(value),
     "<*>": () => left(value),
     ">>=": () => left(value),
+    "<?>": (defaultValue) => defaultValue,
+    "<|>": (defaultValue) => defaultValue,
   } as const);
 
 /**
@@ -253,6 +291,8 @@ const right = <L, R>(value: R): Right<L, R> => {
     "<$>": map,
     "<*>": apply,
     ">>=": flatMap,
+    "<?>": orElse,
+    "<|>": getOrElse,
   } as const;
 };
 
