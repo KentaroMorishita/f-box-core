@@ -19,7 +19,7 @@
 Install via npm:
 
 ```sh
-npm install f-box
+npm install f-box-core
 ```
 
 ---
@@ -35,7 +35,7 @@ A container for encapsulating values, enabling functional transformations with `
 #### Example
 
 ```typescript
-import { Box } from "f-box";
+import { Box } from "f-box-core";
 
 const value = Box.pack(10);
 const result = value["<$>"]((x) => x * 2)["<$>"]((x) => x + 5);
@@ -54,7 +54,7 @@ A reactive container for managing state, ideal for applications requiring reacti
 #### Example
 
 ```typescript
-import { RBox } from "f-box";
+import { RBox } from "f-box-core";
 
 const state = RBox.pack(0);
 
@@ -73,7 +73,7 @@ Represents optional values, preventing `null` or `undefined` errors with a `Just
 #### Example
 
 ```typescript
-import { Maybe } from "f-box";
+import { Maybe } from "f-box-core";
 
 const maybeValue = Maybe.just(42);
 const result = maybeValue["<$>"]((x) => x * 2).getOrElse(0);
@@ -92,7 +92,7 @@ Encapsulates computations that may succeed (`Right`) or fail (`Left`).
 #### Example
 
 ```typescript
-import { Either } from "f-box";
+import { Either } from "f-box-core";
 
 const divide = (a: number, b: number): Either<string, number> =>
   b === 0 ? Either.left("Division by zero") : Either.right(a / b);
@@ -115,7 +115,7 @@ Handles asynchronous computations while maintaining functional style.
 #### Example
 
 ```typescript
-import { Task } from "f-box";
+import { Task } from "f-box-core";
 
 const asyncTask = Task.pack(() => Promise.resolve(10));
 
@@ -155,7 +155,7 @@ Applies a function to the value inside the container. This is particularly usefu
 コンテナ内の値に関数を適用します。値を取り出さずに変換や加工を行いたい場合に便利です。
 
 ```typescript
-import { Box } from "f-box";
+import { Box } from "f-box-core";
 
 const box = Box.pack(5);
 const result = box["<$>"]((x) => x * 2);
@@ -173,7 +173,7 @@ Allows applying a function wrapped in a container to a value wrapped in another 
 包まれた関数を包まれた値に適用します。関数と値がそれぞれ異なる文脈で生成される場合（例：計算や非同期タスク）に便利です。
 
 ```typescript
-import { Box } from "f-box";
+import { Box } from "f-box-core";
 
 const boxFn = Box.pack((x: number) => x + 3);
 const boxValue = Box.pack(7);
@@ -193,7 +193,7 @@ Chains computations while handling the context. This is essential when the resul
 文脈を維持しながら計算を連結します。例えば、非同期タスク、エラー処理、結果が存在しない可能性のある計算を扱う場合に役立ちます。
 
 ```typescript
-import { Either } from "f-box";
+import { Either } from "f-box-core";
 
 const divide = (a: number, b: number): Either<string, number> =>
   b === 0 ? Either.left("Division by zero") : Either.right(a / b);
