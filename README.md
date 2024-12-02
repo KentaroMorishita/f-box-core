@@ -37,8 +37,9 @@ A container for encapsulating values, enabling functional transformations with `
 ```typescript
 import { Box } from "f-box-core";
 
-const value = Box.pack(10);
-const result = value["<$>"]((x) => x * 2)["<$>"]((x) => x + 5);
+const result = Box.pack(10)
+  ["<$>"]((x) => x * 2)
+  ["<$>"]((x) => x + 5);
 
 console.log(result.getValue()); // Outputs: 25
 ```
@@ -75,8 +76,9 @@ Represents optional values, preventing `null` or `undefined` errors with a `Just
 ```typescript
 import { Maybe } from "f-box-core";
 
-const maybeValue = Maybe.just(42);
-const result = maybeValue["<$>"]((x) => x * 2).getOrElse(0);
+const result = Maybe.just(42)
+  ["<$>"]((x) => x * 2) // map
+  ["<|>"](0); // getOrElse
 
 console.log(result); // Outputs: 84
 ```
@@ -98,8 +100,8 @@ const divide = (a: number, b: number): Either<string, number> =>
   b === 0 ? Either.left("Division by zero") : Either.right(a / b);
 
 const result = divide(10, 2)
-  ["<$>"]((x) => x * 3)
-  .getOrElse(0);
+  ["<$>"]((x) => x * 3) // map
+  ["<|>"](0); // getOrElse
 
 console.log(result); // Outputs: 15
 ```
@@ -108,22 +110,43 @@ console.log(result); // Outputs: 15
 
 ### Task
 
-Handles asynchronous computations while maintaining functional style.
+Manages asynchronous computations in a composable and functional way.
 
-非同期計算を扱いつつ、関数型のスタイルを維持します。
+非同期計算を合成可能かつ関数型スタイルで管理します。
 
 #### Example
 
 ```typescript
 import { Task } from "f-box-core";
 
-const asyncTask = Task.pack(() => Promise.resolve(10));
+const apiUrl = "https://jsonplaceholder.typicode.com/posts";
 
-asyncTask["<$>"]((x) => x * 2)
-  .run()
-  .then((result) => {
-    console.log(result); // Outputs: 20
-  });
+type Post = { id: number; title: string; body: string };
+
+const fetchPost = (id: number) =>
+  Task.from<Post>(() =>
+    fetch(`${apiUrl}/${id}`).then((response) => {
+      if (!response.ok) {
+        throw new Error(`Failed to fetch post with ID ${id}`);
+      }
+      return response.json();
+    })
+  );
+
+const safeFetchPost = (id: number) =>
+  Task.tryCatch<Post>(
+    () => fetchPost(id).run(),
+    (error) => {
+      console.error(`Error: ${error.message}`);
+      return { id, title: "Fallback title", body: "No content available" };
+    }
+  );
+
+Task.pack(1)
+  [">>="](safeFetchPost)
+  ["<$>"]((post) => `Post title: ${post.title}`)
+  .run() // fetchPost is called here
+  .then((message) => console.log(message));
 ```
 
 ---

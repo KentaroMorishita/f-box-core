@@ -11,7 +11,7 @@ describe("Task laws", () => {
   describe("Functor laws", () => {
     test("Identity", async () => {
       const identity = (x: number) => x;
-      const task = Task.lift(10);
+      const task = Task.pack(10);
 
       // Identity: `<$>` id = id
       const result = await task["<$>"](identity).run();
@@ -22,7 +22,7 @@ describe("Task laws", () => {
       const f = (x: number) => x + 1;
       const g = (x: number) => x * 2;
       const composed = (x: number) => f(g(x));
-      const task = Task.lift(10);
+      const task = Task.pack(10);
 
       // Composition: `<$>` (f . g) = (`<$>` f) . (`<$>` g)
       const result = await task["<$>"](composed).run();
@@ -45,10 +45,10 @@ describe("Task laws", () => {
   describe("Applicative laws", () => {
     test("Identity", async () => {
       const identity = (x: number) => x;
-      const task = Task.lift(10);
+      const task = Task.pack(10);
 
       // Identity: pure id <*> v = v
-      const result = await Task.lift(identity)["<*>"](task).run();
+      const result = await Task.pack(identity)["<*>"](task).run();
       expect(result).toBe(await task.run());
     });
 
@@ -56,17 +56,17 @@ describe("Task laws", () => {
       const f = (x: number) => x + 1;
 
       // Homomorphism: pure f <*> pure x = pure (f x)
-      const result = await Task.lift(f)["<*>"](Task.lift(10)).run();
-      expect(result).toBe(await Task.lift(f(10)).run());
+      const result = await Task.pack(f)["<*>"](Task.pack(10)).run();
+      expect(result).toBe(await Task.pack(f(10)).run());
     });
 
     test("Interchange", async () => {
       const f = (x: number) => x + 1;
-      const taskFn = Task.lift(f);
+      const taskFn = Task.pack(f);
 
       // Interchange: u <*> pure y = pure ($ y) <*> u
-      const result = await taskFn["<*>"](Task.lift(10)).run();
-      const swapped = await Task.lift((fn: (x: number) => number) => fn(10))
+      const result = await taskFn["<*>"](Task.pack(10)).run();
+      const swapped = await Task.pack((fn: (x: number) => number) => fn(10))
         ["<*>"](taskFn)
         .run();
       expect(result).toBe(swapped);
@@ -75,12 +75,16 @@ describe("Task laws", () => {
     test("Composition", async () => {
       const f = (x: number) => x + 1;
       const g = (x: number) => x * 2;
-      const taskValue = Task.lift(10);
-      const taskF = Task.lift(f);
-      const taskG = Task.lift(g);
+      const taskValue = Task.pack(10);
+      const taskF = Task.pack(f);
+      const taskG = Task.pack(g);
+
+      type F = typeof f;
+      type G = typeof g;
+      type X = number;
 
       // Composition: pure (.) <*> u <*> v <*> w = u <*> (v <*> w)
-      const composed = Task.lift((f: any) => (g: any) => (x: any) => f(g(x)));
+      const composed = Task.pack((f: F) => (g: G) => (x: X) => f(g(x)));
       const left = await composed["<*>"](taskF)
         ["<*>"](taskG)
         ["<*>"](taskValue)
@@ -101,26 +105,26 @@ describe("Task laws", () => {
    */
   describe("Monad laws", () => {
     test("Left identity", async () => {
-      const f = (x: number) => Task.lift(x + 1);
+      const f = (x: number) => Task.pack(x + 1);
       const value = 10;
 
       // Left identity: return a >>= f = f a
-      const result = await Task.lift(value)[">>="](f).run();
+      const result = await Task.pack(value)[">>="](f).run();
       expect(result).toBe(await f(value).run());
     });
 
     test("Right identity", async () => {
-      const task = Task.lift(10);
+      const task = Task.pack(10);
 
       // Right identity: m >>= return = m
-      const result = await task[">>="](Task.lift).run();
+      const result = await task[">>="](Task.pack).run();
       expect(result).toBe(await task.run());
     });
 
     test("Associativity", async () => {
-      const f = (x: number) => Task.lift(x + 1);
-      const g = (x: number) => Task.lift(x * 2);
-      const task = Task.lift(10);
+      const f = (x: number) => Task.pack(x + 1);
+      const g = (x: number) => Task.pack(x * 2);
+      const task = Task.pack(10);
 
       // Associativity: (m >>= f) >>= g = m >>= (\x -> f x >>= g)
       const left = await task[">>="](f)[">>="](g).run();
@@ -138,7 +142,7 @@ describe("Task laws", () => {
       const throwingFn = () => {
         throw new Error("Map error");
       };
-      const task = Task.lift(10);
+      const task = Task.pack(10);
 
       await expect(task["<$>"](throwingFn).run()).rejects.toThrow("Map error");
     });
@@ -147,7 +151,7 @@ describe("Task laws", () => {
       const throwingFn = () => {
         throw new Error("FlatMap error");
       };
-      const task = Task.lift(10);
+      const task = Task.pack(10);
 
       await expect(task[">>="](throwingFn).run()).rejects.toThrow(
         "FlatMap error"
@@ -155,10 +159,10 @@ describe("Task laws", () => {
     });
 
     test("apply propagates errors", async () => {
-      const throwingFnTask = Task.lift(() => {
+      const throwingFnTask = Task.pack(() => {
         throw new Error("Apply error");
       });
-      const valueTask = Task.lift(10);
+      const valueTask = Task.pack(10);
 
       await expect(throwingFnTask["<*>"](valueTask).run()).rejects.toThrow(
         "Apply error"

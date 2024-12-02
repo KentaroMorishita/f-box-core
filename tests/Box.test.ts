@@ -88,8 +88,12 @@ describe("Box laws", () => {
       const v = Box.pack(g);
       const w = Box.pack(value);
 
+      type F = typeof f;
+      type G = typeof g;
+      type X = number;
+
       // Composition: pure (.) <*> u <*> v <*> w = u <*> (v <*> w)
-      const composition = (f: Function) => (g: Function) => (x: any) => f(g(x));
+      const composition = (f: F) => (g: G) => (x: X) => f(g(x));
       expect(pure(composition)["<*>"](u)["<*>"](v)["<*>"](w).getValue()).toBe(
         u["<*>"](v["<*>"](w)).getValue()
       );

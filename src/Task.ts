@@ -141,8 +141,8 @@ const isTask = <T>(value: any): value is Task<T> => value?.isTask === true;
  * コンストラクタとヘルパー関数を含む `Task` ユーティリティオブジェクト。
  */
 export const Task = {
-  pack: task,
-  lift,
+  from: task,
+  pack: lift,
   tryCatch,
   tryTask,
   isTask,
