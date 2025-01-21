@@ -1,4 +1,4 @@
-import { RBox } from "../src/RBox";
+import { RBox, set } from "../src/RBox";
 
 describe("RBox laws and behavior", () => {
   /**
@@ -160,12 +160,15 @@ describe("RBox laws and behavior", () => {
         observedValue = value;
       });
 
-      rbox.setValue(() => 10);
+      rbox.setValue(10); // 直接値を設定
       expect(observedValue).toBe(10);
 
+      rbox.setValue((prev) => prev + 5); // コールバックで更新
+      expect(observedValue).toBe(15);
+
       rbox.unsubscribe(key);
-      rbox.setValue(() => 20);
-      expect(observedValue).toBe(10); // 解除後は値が変わらない
+      rbox.setValue(20);
+      expect(observedValue).toBe(15); // 解除後は値が変わらない
     });
 
     /**
@@ -177,8 +180,11 @@ describe("RBox laws and behavior", () => {
 
       expect(derived.getValue()).toBe(6);
 
-      rbox.setValue(() => 4);
+      rbox.setValue(4); // 直接値を設定
       expect(derived.getValue()).toBe(12);
+
+      rbox.setValue((prev) => prev + 2); // コールバックで更新
+      expect(derived.getValue()).toBe(18);
     });
 
     /**
@@ -189,7 +195,7 @@ describe("RBox laws and behavior", () => {
       const derived = rbox.map((x) => x + 1);
 
       derived.detach(); // 派生ボックスをdetach
-      rbox.setValue(() => 5);
+      rbox.setValue(5);
 
       expect(derived.getValue()).toBe(1); // 初期値 + 1 のまま更新されない
     });
@@ -214,7 +220,7 @@ describe("RBox laws and behavior", () => {
       rbox.unsubscribeAll();
 
       // 値を更新しても購読が呼び出されないことを確認
-      rbox.setValue(() => 1);
+      rbox.setValue(1);
       expect(observer1Called).toBe(false);
       expect(observer2Called).toBe(false);
     });
@@ -238,8 +244,23 @@ describe("RBox laws and behavior", () => {
       });
 
       // 値を更新して購読が呼び出されることを確認
-      rbox.setValue(() => 1);
+      rbox.setValue(1);
       expect(observerCalled).toBe(true);
+    });
+
+    /**
+     * set ヘルパーが直接値とコールバック関数の両方に対応していることを確認。
+     */
+    test("set helper supports both direct values and callbacks", () => {
+      const rbox = RBox.pack(0);
+
+      // 値を直接設定
+      set(rbox)(10);
+      expect(rbox.getValue()).toBe(10);
+
+      // コールバック関数で値を更新
+      set(rbox)((prev) => prev + 5);
+      expect(rbox.getValue()).toBe(15);
     });
   });
 });

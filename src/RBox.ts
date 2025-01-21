@@ -20,9 +20,9 @@ export type RBox<T> = {
   /**
    * Updates the value inside the RBox and notifies all subscribers.
    * RBox 内の値を更新し、すべての購読者に通知します。
-   * @param fn - A function to update the value. / 値を更新する関数。
+   * @param value - A new value or a function to update the value. / 新しい値、または値を更新する関数。
    */
-  readonly setValue: (fn: (value: T) => T) => void;
+  readonly setValue: ((value: T) => void) & ((value: (prev: T) => T) => void);
 
   /**
    * Applies a function to the value inside the RBox and returns a new derived RBox.
@@ -123,15 +123,19 @@ const rbox = <T>(initialValue: T): RBox<T> => {
   };
 
   const getValue = () => value;
-  const setValue = (fn: (value: T) => T) => {
-    value = fn(value);
+  const setValue = (newValue: T | ((prev: T) => T)) => {
+    if (typeof newValue === "function") {
+      value = (newValue as (prev: T) => T)(value);
+    } else {
+      value = newValue;
+    }
     notify();
   };
 
   const map = <U>(fn: (value: T) => U): RBox<U> => {
     const derivedBox = rbox(fn(value));
     const observerKey = subscribe((newValue) => {
-      derivedBox.setValue(() => fn(newValue));
+      derivedBox.setValue(fn(newValue));
     });
 
     derivedBox.detachHandlers.push(() => unsubscribe(observerKey));
@@ -145,9 +149,9 @@ const rbox = <T>(initialValue: T): RBox<T> => {
     const updateInnerBox = (newValue: T) => {
       innerBox.detach();
       innerBox = fn(newValue);
-      derivedBox.setValue(() => innerBox.getValue());
+      derivedBox.setValue(innerBox.getValue());
       const innerObserverKey = innerBox.subscribe((innerValue) => {
-        derivedBox.setValue(() => innerValue);
+        derivedBox.setValue(innerValue);
       });
       derivedBox.detachHandlers.push(() =>
         innerBox.unsubscribe(innerObserverKey)
@@ -158,7 +162,7 @@ const rbox = <T>(initialValue: T): RBox<T> => {
     derivedBox.detachHandlers.push(() => unsubscribe(observerKey));
 
     const innerObserverKey = innerBox.subscribe((innerValue) => {
-      derivedBox.setValue(() => innerValue);
+      derivedBox.setValue(innerValue);
     });
     derivedBox.detachHandlers.push(() =>
       innerBox.unsubscribe(innerObserverKey)
@@ -174,7 +178,7 @@ const rbox = <T>(initialValue: T): RBox<T> => {
     const derivedBox = rbox(this.getValue()(boxValue.getValue()));
 
     const handleChange = () =>
-      derivedBox.setValue(() => this.getValue()(boxValue.getValue()));
+      derivedBox.setValue(this.getValue()(boxValue.getValue()));
     const observerKeys = [
       this.subscribe(handleChange),
       boxValue.subscribe(handleChange),
@@ -226,15 +230,21 @@ const rbox = <T>(initialValue: T): RBox<T> => {
 };
 
 /**
- * Updates the value of an RBox directly.
- * RBox の値を直接更新します。
+ * Updates the value of an RBox directly or with a callback.
+ * RBox の値を直接更新、またはコールバック関数を用いて更新します。
  * @param box - The RBox to update. / 更新する RBox。
- * @returns A function to set the value. / 値を設定する関数を返します。
+ * @returns A function to set the value or update using a callback.
+ *          値を設定する関数、またはコールバックで更新する関数を返します。
  */
 export const set =
   <T>(box: RBox<T>) =>
-  (value: T) =>
-    box.setValue(() => value);
+  (value: T | ((prev: T) => T)) => {
+    if (typeof value === "function") {
+      box.setValue(value as (prev: T) => T);
+    } else {
+      box.setValue(value);
+    }
+  };
 
 /**
  * Checks if the given value is an RBox.
