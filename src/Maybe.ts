@@ -16,6 +16,8 @@ export type Maybe<T> = Just<T> | Nothing;
  */
 export type Just<T> = {
   readonly isMaybe: true; // Identifies the object as a `Maybe`. / オブジェクトが `Maybe` であることを識別。
+  readonly isJust: true; // Identifies the object as a `Just`. / オブジェクトが `Just` であることを識別。
+  readonly isNothing: false; // Identifies the object as a `Nothing`. / オブジェクトが `Nothing` であることを識別。
 
   /**
    * Applies a function to the value inside the `Just` and returns a new `Maybe`.
@@ -126,13 +128,15 @@ export type Just<T> = {
  */
 export type Nothing = {
   readonly isMaybe: true; // Identifies the object as a `Maybe`. / オブジェクトが `Maybe` であることを識別。
+  readonly isJust: false; // Identifies the object as a `Just`. / オブジェクトが `Just` であることを識別。
+  readonly isNothing: true; // Identifies the object as a `Nothing`. / オブジェクトが `Nothing` であることを識別。
 
   /**
    * Returns itself since there is no value to map.
    * 値が存在しないため、自身をそのまま返します。
    * @param _fn - Ignored function. / 無視される関数。
    */
-  readonly map: <U>(_fn: (value: any) => U) => Nothing;
+  readonly map: <U>(_fn: (value: never) => U) => Nothing;
 
   /**
    * Returns itself since there is no value.
@@ -141,7 +145,7 @@ export type Nothing = {
    * `map` のエイリアス。
    * @param _fn - Ignored function. / 無視される関数。
    */
-  readonly "<$>": <U>(_fn: (value: any) => U) => Nothing;
+  readonly "<$>": <U>(_fn: (value: never) => U) => Nothing;
 
   /**
    * Returns itself since there is no value to apply.
@@ -172,7 +176,7 @@ export type Nothing = {
    * 値が存在しないため、自身をそのまま返します。
    * @param _fn - Ignored function. / 無視される関数。
    */
-  readonly flatMap: <U>(_fn: (value: any) => Maybe<U>) => Nothing;
+  readonly flatMap: <U>(_fn: (value: never) => Maybe<U>) => Nothing;
 
   /**
    * Returns itself since there is no value to flatMap.
@@ -181,7 +185,7 @@ export type Nothing = {
    * `flatMap` のエイリアス。
    * @param _fn - Ignored function. / 無視される関数。
    */
-  readonly ">>=": <U>(_fn: (value: any) => Maybe<U>) => Nothing;
+  readonly ">>=": <U>(_fn: (value: never) => Maybe<U>) => Nothing;
 
   /**
    * Always returns `null` for a `Nothing` type.
@@ -227,7 +231,7 @@ export type Nothing = {
    * @param _onJust - Ignored function. / 無視される関数。
    * @param onNothing - A function to handle the `Nothing` case. / `Nothing` を処理する関数。
    */
-  readonly match: <U>(_onJust: (value: any) => U, onNothing: () => U) => U;
+  readonly match: <U>(_onJust: (value: never) => U, onNothing: () => U) => U;
 };
 
 /**
@@ -236,18 +240,21 @@ export type Nothing = {
  */
 const nothingSigleton: Nothing = {
   isMaybe: true,
+  isJust: false,
+  isNothing: true,
   map: () => nothingSigleton,
   apply: () => nothingSigleton,
   flatMap: () => nothingSigleton,
   getValue: () => null,
   orElse: <U>(defaultValue: Maybe<U>): Maybe<U> => defaultValue,
   getOrElse: <U>(defaultValue: U): U => defaultValue,
-  match: <U>(_onJust: (value: any) => U, onNothing: () => U): U => onNothing(),
+  match: <U>(_onJust: (value: never) => U, onNothing: () => U): U =>
+    onNothing(),
   "<$>": () => nothingSigleton,
   "<*>": () => nothingSigleton,
   ">>=": () => nothingSigleton,
   "<?>": <U>(defaultValue: Maybe<U>): Maybe<U> => defaultValue,
-  "<|>": <U>(defaultValue: U): U => defaultValue
+  "<|>": <U>(defaultValue: U): U => defaultValue,
 } as const;
 
 /**
@@ -297,6 +304,8 @@ const just = <T>(value: NonNullable<T>): Just<T> => {
 
   return {
     isMaybe: true,
+    isJust: true,
+    isNothing: false,
     map,
     apply,
     flatMap,
@@ -317,7 +326,7 @@ const just = <T>(value: NonNullable<T>): Just<T> => {
  * 指定された値が `None`（null、undefined、または void）かどうかを判定します。
  * @param value - The value to check. / 判定する値。
  */
-const isNone = (value: any): value is None =>
+const isNone = (value: unknown): value is None =>
   value === null || value === undefined;
 
 /**
@@ -325,8 +334,19 @@ const isNone = (value: any): value is None =>
  * 指定された値が `Maybe` かどうかを判定します。
  * @param value - The value to check. / 判定する値。
  */
-const isMaybe = <T>(value: any): value is Maybe<T> =>
-  value && typeof value === "object" && value.isMaybe === true;
+const isMaybe = <T>(value: unknown): value is Maybe<T> => {
+  if (typeof value !== "object" || isNone(value)) return false;
+  if (!("isMaybe" in value)) return false;
+  return value.isMaybe === true;
+};
+
+/**
+ * Checks if the given value is a `Just`.
+ * 指定された値が `Just` かどうかを判定します。
+ * @param value - The value to check. / 判定する値。
+ */
+const isJust = <T>(value: Maybe<T>): value is Just<T> =>
+  isMaybe(value) && value.isJust;
 
 /**
  * Checks if the given value is `Nothing`.
@@ -334,15 +354,7 @@ const isMaybe = <T>(value: any): value is Maybe<T> =>
  * @param value - The value to check. / 判定する値。
  */
 const isNothing = <T>(value: Maybe<T>): value is Nothing =>
-  isMaybe(value) && value === nothing();
-
-/**
- * Checks if the given value is a `Just`.
- * 指定された値が `Just` かどうかを判定します。
- * @param value - The value to check. / 判定する値。
- */
-const isJust = <T>(value: any): value is Just<T> =>
-  isMaybe(value) && value !== nothing();
+  isMaybe(value) && value.isNothing;
 
 /**
  * A utility object containing constructors and helpers for `Maybe`.

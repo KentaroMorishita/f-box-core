@@ -118,14 +118,14 @@ describe("Either laws", () => {
   describe("Edge case handling", () => {
     test("map propagates for Left", () => {
       const f = (x: number) => x + 1;
-      const left = Either.left<string>("Error");
+      const left = Either.left<string, number>("Error");
 
       // map with Left does nothing
       expect(left["<$>"](f).getValue()).toBe(left.getValue());
     });
 
     test("apply propagates Left", () => {
-      const f = Either.left<string>("Error");
+      const f = Either.left<string, (a: number) => number>("Error");
       const value = Either.right<string, number>(42);
 
       // apply with Left function returns Left
@@ -133,8 +133,8 @@ describe("Either laws", () => {
     });
 
     test("flatMap propagates Left", () => {
-      const f = (_: number) => Either.right<string, string>("Success");
-      const left = Either.left<string>("Error");
+      const f = (_: string) => Either.right<string, string>("Success");
+      const left = Either.left<string, string>("Error");
 
       // flatMap with Left does nothing
       expect(left[">>="](f).getValue()).toBe(left.getValue());
@@ -151,7 +151,7 @@ describe("Either laws", () => {
     });
 
     test("<?> (orElse alias) with Left", () => {
-      const left = Either.left<string>("Error");
+      const left = Either.left<string, number>("Error");
       const fallback = Either.right<string, number>(99);
 
       // `<?>` (orElse alias) should return the fallback for Left
@@ -167,7 +167,7 @@ describe("Either laws", () => {
     });
 
     test("<|> (getOrElse alias) with Left", () => {
-      const left = Either.left<string>("Error");
+      const left = Either.left<string, number>("Error");
       const fallback = 99;
 
       // `<|>` (getOrElse alias) should return the fallback for Left

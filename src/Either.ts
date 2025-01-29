@@ -1,4 +1,4 @@
-/**
+/*
  * Represents a value that might be an error (Left) or a valid result (Right).
  * エラー（Left）または有効な結果（Right）の値を表現します。
  */
@@ -8,21 +8,23 @@ type None = null | undefined | void;
  * Represents a value that can be either `Left` or `Right`.
  * `Left` または `Right` のいずれかである値を表します。
  */
-export type Either<L, R> = Left<L> | Right<L, R>;
+export type Either<L, R> = Left<L, R> | Right<L, R>;
 
 /**
  * Represents a `Left` value, encapsulating an error or invalid result.
  * エラーや無効な結果を包み込む `Left` 型。
  */
-export type Left<L> = {
+export type Left<L, R> = {
   readonly isEither: true; // Identifies the object as an `Either`. / オブジェクトが `Either` であることを識別。
+  readonly isLeft: true; // Identifies the object as an `Left`. / オブジェクトが `Left` であることを識別。
+  readonly isRight: false; // Identifies the object as an `Right`. / オブジェクトが `Right` であることを識別。
 
   /**
    * Ignores the provided function and returns itself since there is no valid value.
    * 指定された関数を無視し、有効な値が存在しないため自身を返します。
    * @param _fn - Ignored function. / 無視される関数。
    */
-  readonly map: <U>(_fn: (value: any) => U) => Left<L>;
+  readonly map: <U>(_fn: (value: R) => U) => Left<L, U>;
 
   /**
    * Ignores the provided function and returns itself since there is no valid value.
@@ -31,7 +33,7 @@ export type Left<L> = {
    * `map` のエイリアス。
    * @param _fn - Ignored function. / 無視される関数。
    */
-  readonly "<$>": <U>(_fn: (value: any) => U) => Left<L>;
+  readonly "<$>": <U>(_fn: (value: R) => U) => Left<L, U>;
 
   /**
    * Ignores the provided function and boxed value, returning itself since there is no valid value.
@@ -62,7 +64,7 @@ export type Left<L> = {
    * 指定された関数を無視し、有効な値が存在しないため自身を返します。
    * @param _fn - Ignored function. / 無視される関数。
    */
-  readonly flatMap: <U>(_fn: (value: any) => Either<L, U>) => Left<L>;
+  readonly flatMap: <U>(_fn: (value: R) => Either<L, U>) => Left<L, U>;
 
   /**
    * Ignores the provided function, returning itself since there is no valid value.
@@ -71,7 +73,7 @@ export type Left<L> = {
    * `flatMap` のエイリアス。
    * @param _fn - Ignored function. / 無視される関数。
    */
-  readonly ">>=": <U>(_fn: (value: any) => Either<L, U>) => Left<L>;
+  readonly ">>=": <U>(_fn: (value: R) => Either<L, U>) => Left<L, U>;
 
   /**
    * Gets the value inside the `Left`.
@@ -117,10 +119,7 @@ export type Left<L> = {
    * @param onLeft - A function to apply if `Left`. / `Left` の場合に適用する関数。
    * @param _onRight - Ignored function. / 無視される関数。
    */
-  readonly match: <U>(
-    onLeft: (value: L) => U,
-    _onRight: (value: any) => U
-  ) => U;
+  readonly match: <U>(onLeft: (value: L) => U, _onRight: (value: R) => U) => U;
 };
 
 /**
@@ -129,6 +128,8 @@ export type Left<L> = {
  */
 export type Right<L, R> = {
   readonly isEither: true; // Identifies the object as an `Either`. / オブジェクトが `Either` であることを識別。
+  readonly isLeft: false; // Identifies the object as an `Left`. / オブジェクトが `Left` であることを識別。
+  readonly isRight: true; // Identifies the object as an `Right`. / オブジェクトが `Right` であることを識別。
 
   /**
    * Applies a function to the value inside the `Right` and returns a new `Either`.
@@ -236,9 +237,11 @@ export type Right<L, R> = {
  * 指定された値を含む `Left` インスタンスを作成します。
  * @param value - The error or invalid state to encapsulate. / 包み込むエラーまたは無効な状態。
  */
-const left = <L>(value: L): Left<L> =>
+const left = <L, R>(value: L): Left<L, R> =>
   ({
     isEither: true,
+    isLeft: true,
+    isRight: false,
     map: () => left(value),
     apply: () => left(value),
     flatMap: () => left(value),
@@ -264,10 +267,12 @@ const right = <L, R>(value: R): Right<L, R> => {
     this: Either<L, (a: A) => B>,
     boxValue: Either<L, A>
   ): Either<L, B> {
-    if (isLeft(this) || isLeft(boxValue)) {
-      return boxValue as Left<L>;
+    if (isLeft(this)) {
+      return left<L, B>(this.getValue());
     }
-
+    if (isLeft(boxValue)) {
+      return left<L, B>(boxValue.getValue());
+    }
     const fn = this.getValue();
     return boxValue.map((a) => fn(a));
   };
@@ -276,11 +281,13 @@ const right = <L, R>(value: R): Right<L, R> => {
   const getValue = () => value;
   const orElse = (_defaultValue: Either<L, R>): Either<L, R> => right(value);
   const getOrElse = (_defaultValue: R): R => value;
-  const match = <U>(_onLeft: (value: L) => U, onRight: (value: R) => U) =>
+  const match = <U>(_onLeft: (l: L) => U, onRight: (r: R) => U) =>
     onRight(value);
 
   return {
     isEither: true,
+    isLeft: false,
+    isRight: true,
     map,
     apply,
     flatMap,
@@ -307,7 +314,7 @@ const either = right;
  * 指定された値が `None`（null、undefined、または void）かどうかを判定します。
  * @param value - The value to check. / 判定する値。
  */
-const isNone = (value: any): value is None =>
+const isNone = (value: unknown): value is None =>
   value === null || value === undefined;
 
 /**
@@ -315,48 +322,27 @@ const isNone = (value: any): value is None =>
  * 指定された値が `Either` かどうかを判定します。
  * @param value - The value to check. / 判定する値。
  */
-const isEither = <L, R>(value: any): value is Either<L, R> =>
-  value && typeof value === "object" && value.isEither === true;
+const isEither = <L, R>(value: unknown): value is Either<L, R> => {
+  if (typeof value !== "object" || isNone(value)) return false;
+  if (!('isEither' in value)) return false;
+  return value.isEither === true;
+};
 
 /**
  * Checks if the given `Either` is a `Left`.
  * 指定された `Either` が `Left` かどうかを判定します。
  * @param value - The `Either` to check. / 判定する `Either`。
  */
-const isLeft = <L, R>(value: Either<L, R>): value is Left<L> => {
-  return (
-    isEither(value) &&
-    (
-      value.match as (
-        onLeft: (l: L) => boolean,
-        onRight: (r: R) => boolean
-      ) => boolean
-    )(
-      (l) => !isNone(l),
-      () => false
-    )
-  );
-};
+const isLeft = <L, R>(value: Either<L, R>): value is Left<L, R> =>
+  isEither<L, R>(value) && value.isLeft;
 
 /**
  * Checks if the given `Either` is a `Right`.
  * 指定された `Either` が `Right` かどうかを判定します。
  * @param value - The `Either` to check. / 判定する `Either`。
  */
-const isRight = <L, R>(value: Either<L, R>): value is Right<L, R> => {
-  return (
-    isEither(value) &&
-    (
-      value.match as (
-        onLeft: (l: L) => boolean,
-        onRight: (r: R) => boolean
-      ) => boolean
-    )(
-      () => false,
-      (r) => !isNone(r)
-    )
-  );
-};
+const isRight = <L, R>(value: Either<L, R>): value is Right<L, R> =>
+  isEither<L, R>(value) && value.isRight;
 
 /**
  * A utility object containing constructors and helpers for `Either`.
