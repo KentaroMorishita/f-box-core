@@ -86,7 +86,7 @@ export type Left<L, R> = {
    * 無効な結果を表しているため、指定されたデフォルト値を返します。
    * @param defaultValue - The default value to return. / 返すデフォルト値。
    */
-  readonly orElse: <U>(defaultValue: Either<L, U>) => Either<L, U>;
+  readonly orElse: (defaultValue: Either<L, R>) => Either<L, R>;
 
   /**
    * Returns the provided default value since this represents an invalid result.
@@ -95,14 +95,14 @@ export type Left<L, R> = {
    * `orElse` のエイリアス。
    * @param defaultValue - The default value to return. / 返すデフォルト値。
    */
-  readonly "<?>": <U>(defaultValue: Either<L, U>) => Either<L, U>;
+  readonly "<?>": (defaultValue: Either<L, R>) => Either<L, R>;
 
   /**
    * Returns the provided default value since this represents an invalid result.
    * 無効な結果を表しているため、指定されたデフォルト値を返します。
    * @param defaultValue - The default value to return. / 返すデフォルト値。
    */
-  readonly getOrElse: <U>(defaultValue: U) => U;
+  readonly getOrElse: (defaultValue: R) => R;
 
   /**
    * Returns the provided default value since this represents an invalid result.
@@ -111,7 +111,7 @@ export type Left<L, R> = {
    * `getOrElse` のエイリアス。
    * @param defaultValue - The default value to return. / 返すデフォルト値。
    */
-  readonly "<|>": <U>(defaultValue: U) => U;
+  readonly "<|>": (defaultValue: R) => R;
 
   /**
    * Matches the `Left` case and applies the corresponding function.
@@ -246,8 +246,8 @@ const left = <L, R>(value: L): Left<L, R> =>
     apply: () => left(value),
     flatMap: () => left(value),
     getValue: () => value,
-    orElse: <U>(defaultValue: Either<L, U>): Either<L, U> => defaultValue,
-    getOrElse: <U>(defaultValue: U): U => defaultValue,
+    orElse: (defaultValue) => defaultValue,
+    getOrElse: (defaultValue) => defaultValue,
     match: (onLeft, _onRight) => onLeft(value),
     "<$>": () => left(value),
     "<*>": () => left(value),
@@ -324,7 +324,7 @@ const isNone = (value: unknown): value is None =>
  */
 const isEither = <L, R>(value: unknown): value is Either<L, R> => {
   if (typeof value !== "object" || isNone(value)) return false;
-  if (!('isEither' in value)) return false;
+  if (!("isEither" in value)) return false;
   return value.isEither === true;
 };
 
