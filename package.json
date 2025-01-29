@@ -1,6 +1,6 @@
 {
   "name": "f-box-core",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "description": "Put your data in a box, and suddenly it's easier to handle, transform, and use however you need.",
   "type": "module",
   "files": [
