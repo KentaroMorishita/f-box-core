@@ -99,10 +99,31 @@ const box = <T>(value: T): Box<T> => {
 export const isBox = <T>(value: any): value is Box<T> => value?.isBox === true;
 
 /**
+ * Enables a "do notation" for Box, allowing for sequential composition of Box operations.
+ * Box に対して「do 記法」を提供し、Box の操作を逐次的に記述できるようにします。
+ *
+ * @param generatorFunc - A generator function yielding Box values.
+ *                        Box の値を `yield` するジェネレータ関数。
+ * @returns A Box containing the final computed value.
+ *          計算結果を含む Box を返します。
+ */
+function Do<T, U>(generatorFunc: () => Generator<Box<T>, U, T>): Box<U> {
+  const iterator = generatorFunc();
+
+  function step(value?: T): Box<U> {
+    const { value: result, done } = iterator.next(value as T);
+    return done ? Box.pack(result) : result[">>="](step);
+  }
+
+  return step(undefined as never);
+}
+
+/**
  * Box utility object containing helpers like `pack` and `isBox`.
  * `pack` や `isBox` を含む Box ユーティリティオブジェクト。
  */
 export const Box = {
+  do: Do,
   pack: box,
   isBox,
 } as const;

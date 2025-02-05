@@ -345,10 +345,33 @@ const isRight = <L, R>(value: Either<L, R>): value is Right<L, R> =>
   isEither<L, R>(value) && value.isRight;
 
 /**
+ * Enables a "do notation" for Either, allowing for sequential composition of Either operations.
+ * Either に対して「do 記法」を提供し、Either の操作を逐次的に記述できるようにします。
+ *
+ * @param generatorFunc - A generator function yielding Either values.
+ *                        Either の値を `yield` するジェネレータ関数。
+ * @returns An Either containing the final computed value.
+ *          計算結果を含む Either を返します。
+ */
+function Do<L, R, U>(
+  generatorFunc: () => Generator<Either<L, R>, U, R>
+): Either<L, U> {
+  const iterator = generatorFunc();
+
+  function step(value?: R): Either<L, U> {
+    const { value: result, done } = iterator.next(value as R);
+    return done ? Either.right(result) : result[">>="](step);
+  }
+
+  return step(undefined as never);
+}
+
+/**
  * A utility object containing constructors and helpers for `Either`.
  * `Either` のコンストラクタおよびヘルパーを含むユーティリティオブジェクト。
  */
 export const Either = {
+  do: Do,
   pack: either,
   right,
   left,

@@ -137,10 +137,31 @@ const lift = <T>(value: T): Task<T> => task(() => Promise.resolve(value));
 const isTask = <T>(value: any): value is Task<T> => value?.isTask === true;
 
 /**
+ * Enables a "do notation" for Task, allowing for sequential composition of Task operations.
+ * Task に対して「do 記法」を提供し、Task の操作を逐次的に記述できるようにします。
+ *
+ * @param generatorFunc - A generator function yielding Task values.
+ *                        Task の値を `yield` するジェネレータ関数。
+ * @returns A Task containing the final computed value.
+ *          計算結果を含む Task を返します。
+ */
+function Do<T, U>(generatorFunc: () => Generator<Task<T>, U, T>): Task<U> {
+  const iterator = generatorFunc();
+
+  function step(value?: T): Task<U> {
+    const { value: result, done } = iterator.next(value as T);
+    return done ? Task.pack(result) : result[">>="](step);
+  }
+
+  return step(undefined as never);
+}
+
+/**
  * Task utility object containing constructors and helper functions.
  * コンストラクタとヘルパー関数を含む `Task` ユーティリティオブジェクト。
  */
 export const Task = {
+  do: Do,
   from: task,
   pack: lift,
   tryCatch,

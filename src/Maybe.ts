@@ -357,10 +357,31 @@ const isNothing = <T>(value: Maybe<T>): value is Nothing =>
   isMaybe(value) && value.isNothing;
 
 /**
+ * Enables a "do notation" for Maybe, allowing for sequential composition of Maybe operations.
+ * Maybe に対して「do 記法」を提供し、Maybe の操作を逐次的に記述できるようにします。
+ *
+ * @param generatorFunc - A generator function yielding Maybe values.
+ *                        Maybe の値を `yield` するジェネレータ関数。
+ * @returns A Maybe containing the final computed value.
+ *          計算結果を含む Maybe を返します。
+ */
+function Do<T, U>(generatorFunc: () => Generator<Maybe<T>, U, T>): Maybe<U> {
+  const iterator = generatorFunc();
+
+  function step(value?: T): Maybe<U> {
+    const { value: result, done } = iterator.next(value as T);
+    return done ? Maybe.pack(result) : result[">>="](step);
+  }
+
+  return step(undefined as never);
+}
+
+/**
  * A utility object containing constructors and helpers for `Maybe`.
  * `Maybe` のコンストラクタおよびヘルパーを含むユーティリティオブジェクト。
  */
 export const Maybe = {
+  do: Do,
   pack: maybe,
   just,
   nothing,

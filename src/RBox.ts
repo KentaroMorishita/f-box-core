@@ -255,10 +255,31 @@ const isRBox = <T>(value: any): value is RBox<T> =>
   value && typeof value === "object" && (value as RBox<T>).isRBox === true;
 
 /**
+ * Enables a "do notation" for RBox, allowing for sequential composition of RBox operations.
+ * RBox に対して「do 記法」を提供し、RBox の操作を逐次的に記述できるようにします。
+ *
+ * @param generatorFunc - A generator function yielding RBox values.
+ *                        RBox の値を `yield` するジェネレータ関数。
+ * @returns An RBox containing the final computed value.
+ *          計算結果を含む RBox を返します。
+ */
+function Do<T, U>(generatorFunc: () => Generator<RBox<T>, U, T>): RBox<U> {
+  const iterator = generatorFunc();
+
+  function step(value?: T): RBox<U> {
+    const { value: result, done } = iterator.next(value as T);
+    return done ? RBox.pack(result) : result[">>="](step);
+  }
+
+  return step(undefined as never);
+}
+
+/**
  * RBox utility object containing helpers like `pack`, `set`, and `isRBox`.
  * `pack`、`set`、`isRBox` を含む RBox ユーティリティオブジェクト。
  */
 export const RBox = {
+  do: Do,
   pack: rbox,
   set,
   isRBox,
