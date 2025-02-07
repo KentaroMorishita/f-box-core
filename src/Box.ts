@@ -107,12 +107,17 @@ export const isBox = <T>(value: any): value is Box<T> => value?.isBox === true;
  * @returns A Box containing the final computed value.
  *          計算結果を含む Box を返します。
  */
-function Do<T, U>(generatorFunc: () => Generator<Box<T>, U, T>): Box<U> {
+function Do<T, U>(
+  generatorFunc: () => Generator<Box<T>, U | Box<U>, T>
+): Box<U> {
   const iterator = generatorFunc();
-
   function step(value?: T): Box<U> {
     const { value: result, done } = iterator.next(value as T);
-    return done ? Box.pack(result) : result[">>="](step);
+    return done
+      ? Box.isBox(result)
+        ? (result as Box<U>)
+        : Box.pack<U>(result as U)
+      : result[">>="](step);
   }
 
   return step(undefined as never);

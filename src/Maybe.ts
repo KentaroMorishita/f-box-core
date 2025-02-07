@@ -365,12 +365,17 @@ const isNothing = <T>(value: Maybe<T>): value is Nothing =>
  * @returns A Maybe containing the final computed value.
  *          計算結果を含む Maybe を返します。
  */
-function Do<T, U>(generatorFunc: () => Generator<Maybe<T>, U, T>): Maybe<U> {
+function Do<T, U>(
+  generatorFunc: () => Generator<Maybe<T>, U | Maybe<U>, T>
+): Maybe<U> {
   const iterator = generatorFunc();
-
   function step(value?: T): Maybe<U> {
     const { value: result, done } = iterator.next(value as T);
-    return done ? Maybe.pack(result) : result[">>="](step);
+    return done
+      ? Maybe.isMaybe(result)
+        ? (result as Maybe<U>)
+        : Maybe.pack<U>(result as U)
+      : result[">>="](step);
   }
 
   return step(undefined as never);

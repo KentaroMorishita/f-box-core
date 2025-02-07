@@ -354,18 +354,20 @@ const isRight = <L, R>(value: Either<L, R>): value is Right<L, R> =>
  *          計算結果を含む Either を返します。
  */
 function Do<L, R, U>(
-  generatorFunc: () => Generator<Either<L, R>, U, R>
+  generatorFunc: () => Generator<Either<L, R>, U | Either<L, U>, R>
 ): Either<L, U> {
   const iterator = generatorFunc();
-
   function step(value?: R): Either<L, U> {
     const { value: result, done } = iterator.next(value as R);
-    return done ? Either.right(result) : result[">>="](step);
+    return done
+      ? Either.isEither(result)
+        ? (result as Either<L, U>)
+        : Either.pack<L, U>(result as U)
+      : result[">>="](step);
   }
 
   return step(undefined as never);
 }
-
 /**
  * A utility object containing constructors and helpers for `Either`.
  * `Either` のコンストラクタおよびヘルパーを含むユーティリティオブジェクト。

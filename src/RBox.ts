@@ -263,12 +263,17 @@ const isRBox = <T>(value: any): value is RBox<T> =>
  * @returns An RBox containing the final computed value.
  *          計算結果を含む RBox を返します。
  */
-function Do<T, U>(generatorFunc: () => Generator<RBox<T>, U, T>): RBox<U> {
+function Do<T, U>(
+  generatorFunc: () => Generator<RBox<T>, U | RBox<U>, T>
+): RBox<U> {
   const iterator = generatorFunc();
-
   function step(value?: T): RBox<U> {
     const { value: result, done } = iterator.next(value as T);
-    return done ? RBox.pack(result) : result[">>="](step);
+    return done
+      ? RBox.isRBox(result)
+        ? (result as RBox<U>)
+        : RBox.pack<U>(result as U)
+      : result[">>="](step);
   }
 
   return step(undefined as never);

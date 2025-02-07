@@ -145,12 +145,17 @@ const isTask = <T>(value: any): value is Task<T> => value?.isTask === true;
  * @returns A Task containing the final computed value.
  *          計算結果を含む Task を返します。
  */
-function Do<T, U>(generatorFunc: () => Generator<Task<T>, U, T>): Task<U> {
+function Do<T, U>(
+  generatorFunc: () => Generator<Task<T>, U | Task<U>, T>
+): Task<U> {
   const iterator = generatorFunc();
-
   function step(value?: T): Task<U> {
     const { value: result, done } = iterator.next(value as T);
-    return done ? Task.pack(result) : result[">>="](step);
+    return done
+      ? Task.isTask(result)
+        ? (result as Task<U>)
+        : Task.pack<U>(result as U)
+      : result[">>="](step);
   }
 
   return step(undefined as never);
