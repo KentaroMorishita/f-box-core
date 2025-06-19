@@ -174,4 +174,82 @@ describe("Either laws", () => {
       expect(left["<|>"](fallback)).toBe(99);
     });
   });
+
+  describe("tryCatch captures errors and returns Either", () => {
+    test("returns Right when function succeeds", () => {
+      const result = Either.tryCatch(
+        () => 42,
+        (e) => `Error: ${e.message}`
+      );
+      expect(result.isRight).toBe(true);
+      expect(result.getValue()).toBe(42);
+    });
+
+    test("returns Left with mapped error message when function throws", () => {
+      const result = Either.tryCatch(
+        () => {
+          throw new Error("Something went wrong");
+        },
+        (e) => `Error: ${e.message}`
+      );
+      expect(result.isLeft).toBe(true);
+      expect(result.getValue()).toBe("Error: Something went wrong");
+    });
+
+    test("handles different error types correctly", () => {
+      const result = Either.tryCatch(
+        () => {
+          throw new TypeError("Invalid type");
+        },
+        (e) => `Handled: ${e.name}`
+      );
+      expect(result.isLeft).toBe(true);
+      expect(result.getValue()).toBe("Handled: TypeError");
+    });
+
+    test("executes function and wraps result in Right", () => {
+      let called = false;
+      const result = Either.tryCatch(
+        () => {
+          called = true;
+          return "Success";
+        },
+        () => "Failed"
+      );
+      expect(called).toBe(true);
+      expect(result.isRight).toBe(true);
+      expect(result.getValue()).toBe("Success");
+    });
+
+    test("calls error handler when function throws", () => {
+      let called = false;
+      const result = Either.tryCatch(
+        () => {
+          throw new Error("Boom!");
+        },
+        () => {
+          called = true;
+          return "Recovery";
+        }
+      );
+      expect(called).toBe(true);
+      expect(result.isLeft).toBe(true);
+      expect(result.getValue()).toBe("Recovery");
+    });
+
+    test("catches thrown errors and returns Left", () => {
+      const throwingFn = () => {
+        throw new Error("Unexpected error");
+      };
+
+      const result = Either.tryCatch(throwingFn, (e) => `Caught: ${e.message}`);
+
+      // `tryCatch` should catch the error, so it must not throw
+      expect(() => result).not.toThrow();
+
+      // `result` should be a Left containing the mapped error message
+      expect(result.isLeft).toBe(true);
+      expect(result.getValue()).toBe("Caught: Unexpected error");
+    });
+  });
 });

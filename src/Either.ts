@@ -310,6 +310,25 @@ const right = <L, R>(value: R): Right<L, R> => {
 const either = right;
 
 /**
+ * Executes a computation and captures any thrown errors, returning an `Either`.
+ * 計算を実行し、例外が発生した場合は `Left` を返す `Either` を作成します。
+ *
+ * @param fn - A function that performs the computation. / 計算を実行する関数。
+ * @param onError - A function that converts an error into a `Left` value. / エラーを `Left` の値に変換する関数。
+ * @returns `Right<R>` if the computation succeeds, otherwise `Left<L>`. / 計算が成功すれば `Right<R>`、失敗すれば `Left<L>`。
+ */
+const tryCatch = <L, R>(
+  fn: () => R,
+  onError: (error: any) => L
+): Either<L, R> => {
+  try {
+    return right(fn());
+  } catch (error) {
+    return left(onError(error));
+  }
+};
+
+/**
  * Checks if the given value is `None` (null, undefined, or void).
  * 指定された値が `None`（null、undefined、または void）かどうかを判定します。
  * @param value - The value to check. / 判定する値。
@@ -377,6 +396,7 @@ export const Either = {
   pack: either,
   right,
   left,
+  tryCatch,
   isNone,
   isEither,
   isLeft,
