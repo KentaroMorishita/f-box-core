@@ -10,7 +10,13 @@
       "Bash(git commit:*)",
       "Bash(npm run version:patch:*)",
       "Bash(git push:*)",
-      "Bash(npm run publish:public:*)"
+      "Bash(npm run publish:public:*)",
+      "mcp__github-mcp-server__search_repositories",
+      "mcp__github-mcp-server__get_me",
+      "mcp__github-mcp-server__get_file_contents",
+      "Bash(npx tsx:*)",
+      "Bash(npx tsc:*)",
+      "Bash(node:*)"
     ],
     "deny": []
   }
