@@ -63,6 +63,12 @@ export type Box<T> = {
 };
 
 /**
+ * Adapter type for Do's `$` parameter.
+ * `$` は `yield* $(Box.pack(...))` のためのアダプタ関数です。
+ */
+export type $Box = <A>(fa: Box<A>) => Generator<any, A, any>;
+
+/**
  * Creates a new Box containing the given value.
  * 指定された値を含む新しい Box を作成します。
  * @param value - The value to encapsulate. / 包み込む値。
@@ -107,17 +113,46 @@ export const isBox = <T>(value: any): value is Box<T> => value?.isBox === true;
  * @returns A Box containing the final computed value.
  *          計算結果を含む Box を返します。
  */
+// Adapter pattern support to keep `yield*` inference precise.
+const GenBoxSym: unique symbol = Symbol();
+type GenBox<A> = { readonly _tag: typeof GenBoxSym; readonly fa: Box<A> };
+
+// Overload 1: legacy style (yield Box<T>)
 function Do<T, U>(
   generatorFunc: () => Generator<Box<T>, U | Box<U>, T>
-): Box<U> {
-  const iterator = generatorFunc();
-  function step(value?: T): Box<U> {
-    const { value: result, done } = iterator.next(value as T);
+): Box<U>;
+// Overload 2: adapter style (yield* $(fa))
+function Do<R>(
+  g: (
+    $: <A>(fa: Box<A>) => Generator<any, A, any>
+  ) => Generator<any, R, any>
+): Box<R>;
+// Implementation
+function Do(arg: any): Box<any> {
+  if (typeof arg === "function" && arg.length >= 1) {
+    const $ = <A>(fa: Box<A>) =>
+      (function* (): Generator<GenBox<A>, A, any> {
+        return yield { _tag: GenBoxSym, fa } as any;
+      })();
+
+    const it = arg($);
+    const step = (prev?: unknown): Box<any> => {
+      const n = it.next(prev);
+      if (n.done) return Box.pack<any>(n.value as any);
+      const y = n.value as GenBox<unknown>;
+      return y.fa[">>="](step);
+    };
+    return step(undefined as never);
+  }
+
+  const iterator = (arg as () => Generator<Box<any>, any | Box<any>, any>)();
+  function step(value?: any): Box<any> {
+    const { value: result, done } = iterator.next(value as any);
     return done
       ? Box.isBox(result)
-        ? (result as Box<U>)
-        : Box.pack<U>(result as U)
-      : result[">>="](step);
+        ? (result as Box<any>)
+        : Box.pack<any>(result as any)
+      : (result as Box<any>)[">>="](step);
   }
 
   return step(undefined as never);
@@ -127,8 +162,12 @@ function Do<T, U>(
  * Box utility object containing helpers like `pack` and `isBox`.
  * `pack` や `isBox` を含む Box ユーティリティオブジェクト。
  */
-export const Box = {
+export const Box: {
+  do: typeof Do;
+  pack: typeof box;
+  isBox: typeof isBox;
+} = {
   do: Do,
   pack: box,
   isBox,
-} as const;
+};

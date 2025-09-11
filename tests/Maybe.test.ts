@@ -1,4 +1,5 @@
 import { Maybe } from "../src/Maybe";
+import type { $Maybe } from "../src/Maybe";
 
 describe("Maybe laws and behavior", () => {
   /**
@@ -212,6 +213,40 @@ describe("Maybe laws and behavior", () => {
 
       // `<|>` (getOrElse alias) should return the fallback for Nothing
       expect(nothing["<|>"](fallback)).toBe(99);
+    });
+  });
+
+  describe("Do notation", () => {
+    test("legacy yield style", () => {
+      const result = Maybe.do(function* () {
+        const a: number = yield Maybe.pack(1);
+        const b: number = yield Maybe.pack(2);
+        return a + b;
+      });
+      expect(Maybe.isJust(result)).toBe(true);
+      expect(result.getOrElse(0)).toBe(3);
+    });
+
+    test("$ adapter with yield*", () => {
+      const result = Maybe.do(function* ($: $Maybe) {
+        const a = yield* $(Maybe.pack(1));
+        const b = yield* $(Maybe.pack(a + 2));
+        return a + b; // 1 + 3 = 4
+      });
+      expect(Maybe.isJust(result)).toBe(true);
+      expect(result.getOrElse(0)).toBe(4);
+    });
+
+    test("short-circuit with Nothing", () => {
+      const result = Maybe.do(function* ($: $Maybe) {
+        // Explicitly cast for the type parameter; value path short-circuits anyway.
+        const nothingAsNumber = Maybe.nothing() as unknown as ReturnType<
+          typeof Maybe.pack<number>
+        >;
+        yield* $(nothingAsNumber);
+        return 1; // not reached
+      });
+      expect(Maybe.isNothing(result)).toBe(true);
     });
   });
 });

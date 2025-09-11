@@ -1,4 +1,5 @@
 import { RBox, set } from "../src/RBox";
+import type { $RBox } from "../src/RBox";
 
 describe("RBox laws and behavior", () => {
   /**
@@ -261,6 +262,26 @@ describe("RBox laws and behavior", () => {
       // コールバック関数で値を更新
       set(rbox)((prev) => prev + 5);
       expect(rbox.getValue()).toBe(15);
+    });
+  });
+
+  describe("Do notation", () => {
+    test("legacy yield style", () => {
+      const result = RBox.do(function* () {
+        const a: number = yield RBox.pack(1);
+        const b: number = yield RBox.pack(2);
+        return a + b;
+      });
+      expect(result.getValue()).toBe(3);
+    });
+
+    test("$ adapter with yield*", () => {
+      const result = RBox.do(function* ($: $RBox) {
+        const a = yield* $(RBox.pack(1));
+        const b = yield* $(RBox.pack(a + 2));
+        return a + b; // 1 + 3 = 4
+      });
+      expect(result.getValue()).toBe(4);
     });
   });
 });

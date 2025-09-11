@@ -11,6 +11,12 @@ type None = null | undefined | void;
 export type Maybe<T> = Just<T> | Nothing;
 
 /**
+ * Adapter type for Do's `$` parameter.
+ * `$` は `yield* $(Maybe.pack(...))` のためのアダプタ関数です。
+ */
+export type $Maybe = <A>(fa: Maybe<A>) => Generator<any, A, any>;
+
+/**
  * Represents a `Just` value, encapsulating a present value.
  * 値が存在していることを表す `Just` 型。
  */
@@ -365,27 +371,71 @@ const isNothing = <T>(value: Maybe<T>): value is Nothing =>
  * @returns A Maybe containing the final computed value.
  *          計算結果を含む Maybe を返します。
  */
+// Generator adapter style (Effect-like): allow passing `$` into the generator
+// for precise type inference at each `yield* $(fa)` site, while preserving the
+// existing Do signature for backward compatibility.
+const GenMaybeSym: unique symbol = Symbol();
+type GenMaybe<A> = { readonly _tag: typeof GenMaybeSym; readonly fa: Maybe<A> };
+
+// Overload 1: legacy style (yield Maybe<T>)
 function Do<T, U>(
   generatorFunc: () => Generator<Maybe<T>, U | Maybe<U>, T>
-): Maybe<U> {
-  const iterator = generatorFunc();
-  function step(value?: T): Maybe<U> {
-    const { value: result, done } = iterator.next(value as T);
+): Maybe<U>;
+// Overload 2: adapter style (yield* $(fa))
+function Do<R>(
+  g: (
+    $: <A>(fa: Maybe<A>) => Generator<any, A, any>
+  ) => Generator<any, R, any>
+): Maybe<R>;
+// Implementation
+function Do(arg: any): Maybe<any> {
+  // Adapter path when the generator expects an argument (the `$` adapter)
+  if (typeof arg === "function" && arg.length >= 1) {
+    const $ = <A>(fa: Maybe<A>) =>
+      (function* (): Generator<GenMaybe<A>, A, any> {
+        return yield { _tag: GenMaybeSym, fa } as any;
+      })();
+
+    const it = arg($);
+    const step = (prev?: unknown): Maybe<any> => {
+      const n = it.next(prev);
+      if (n.done) return Maybe.pack<any>(n.value as any);
+      const y = n.value as GenMaybe<unknown>;
+      return y.fa[">>="](step);
+    };
+    return step(undefined as never);
+  }
+
+  // Legacy path (current behavior): generator with no parameters, yielding Maybe values
+  const iterator = (arg as () => Generator<Maybe<any>, any | Maybe<any>, any>)();
+  function step(value?: any): Maybe<any> {
+    const { value: result, done } = iterator.next(value as any);
     return done
       ? Maybe.isMaybe(result)
-        ? (result as Maybe<U>)
-        : Maybe.pack<U>(result as U)
-      : result[">>="](step);
+        ? (result as Maybe<any>)
+        : Maybe.pack<any>(result as any)
+      : (result as Maybe<any>)[">>="](step);
   }
 
   return step(undefined as never);
 }
 
+// gen sugar: adapter-first form to improve contextual typing of `$`.
+// (gen API removed for simplicity; use Maybe.do instead)
 /**
  * A utility object containing constructors and helpers for `Maybe`.
  * `Maybe` のコンストラクタおよびヘルパーを含むユーティリティオブジェクト。
  */
-export const Maybe = {
+export const Maybe: {
+  do: typeof Do;
+  pack: typeof maybe;
+  just: typeof just;
+  nothing: typeof nothing;
+  isNone: typeof isNone;
+  isMaybe: typeof isMaybe;
+  isNothing: typeof isNothing;
+  isJust: typeof isJust;
+} = {
   do: Do,
   pack: maybe,
   just,
@@ -394,4 +444,7 @@ export const Maybe = {
   isMaybe,
   isNothing,
   isJust,
-} as const;
+};
+
+// Public adapter type for Do's `$` parameter to enable explicit typing when desired.
+// (Adapter type exported at top)

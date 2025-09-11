@@ -1,4 +1,5 @@
 import { Either } from "../src/Either";
+import type { $Either } from "../src/Either";
 
 describe("Either laws", () => {
   describe("Functor laws", () => {
@@ -250,6 +251,38 @@ describe("Either laws", () => {
       // `result` should be a Left containing the mapped error message
       expect(result.isLeft).toBe(true);
       expect(result.getValue()).toBe("Caught: Unexpected error");
+    });
+  });
+
+  describe("Do notation", () => {
+    test("legacy yield style (Right)", () => {
+      const result = Either.do<string, number, number>(function* () {
+        const a: number = yield Either.right<string, number>(1);
+        const b: number = yield Either.right<string, number>(2);
+        return a + b;
+      });
+      expect(Either.isRight(result)).toBe(true);
+      expect(result.getOrElse(0)).toBe(3);
+    });
+
+    test("$ adapter with yield* (Right)", () => {
+      const result = Either.do<string, number>(function* ($: $Either<string>) {
+        const a = yield* $(Either.right<string, number>(1));
+        const b = yield* $(Either.right<string, number>(a + 2));
+        return a + b; // 1 + 3 = 4
+      });
+      expect(Either.isRight(result)).toBe(true);
+      expect(result.getOrElse(0)).toBe(4);
+    });
+
+    test("short-circuit on Left", () => {
+      const result = Either.do<string, number>(function* ($: $Either<string>) {
+        // yield and ignore the value to avoid unused variable errors
+        yield* $(Either.left<string, number>("err"));
+        return 1; // not reached
+      });
+      expect(Either.isLeft(result)).toBe(true);
+      expect(result.getOrElse(99)).toBe(99);
     });
   });
 });

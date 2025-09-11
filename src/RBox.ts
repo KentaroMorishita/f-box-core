@@ -109,6 +109,12 @@ export type RBox<T> = {
 };
 
 /**
+ * Adapter type for Do's `$` parameter.
+ * `$` は `yield* $(RBox.pack(...))` のためのアダプタ関数です。
+ */
+export type $RBox = <A>(fa: RBox<A>) => Generator<any, A, any>;
+
+/**
  * Creates a new RBox with an initial value.
  * 初期値を持つ新しい RBox を作成します。
  * @param initialValue - The initial value for the RBox. / RBox の初期値。
@@ -263,29 +269,67 @@ const isRBox = <T>(value: any): value is RBox<T> =>
  * @returns An RBox containing the final computed value.
  *          計算結果を含む RBox を返します。
  */
+// Adapter pattern support to keep `yield*` inference precise.
+const GenRBoxSym: unique symbol = Symbol();
+type GenRBox<A> = { readonly _tag: typeof GenRBoxSym; readonly fa: RBox<A> };
+
+// Overload 1: legacy style (yield RBox<T>)
 function Do<T, U>(
   generatorFunc: () => Generator<RBox<T>, U | RBox<U>, T>
-): RBox<U> {
-  const iterator = generatorFunc();
-  function step(value?: T): RBox<U> {
-    const { value: result, done } = iterator.next(value as T);
+): RBox<U>;
+// Overload 2: adapter style (yield* $(fa))
+function Do<R>(
+  g: (
+    $: <A>(fa: RBox<A>) => Generator<any, A, any>
+  ) => Generator<any, R, any>
+): RBox<R>;
+// Implementation
+function Do(arg: any): RBox<any> {
+  if (typeof arg === "function" && arg.length >= 1) {
+    const $ = <A>(fa: RBox<A>) =>
+      (function* (): Generator<GenRBox<A>, A, any> {
+        return yield { _tag: GenRBoxSym, fa } as any;
+      })();
+
+    const it = arg($);
+    const step = (prev?: unknown): RBox<any> => {
+      const n = it.next(prev);
+      if (n.done) return RBox.pack<any>(n.value as any);
+      const y = n.value as GenRBox<unknown>;
+      return y.fa[">>="](step);
+    };
+    return step(undefined as never);
+  }
+
+  const iterator = (arg as () => Generator<RBox<any>, any | RBox<any>, any>)();
+  function step(value?: any): RBox<any> {
+    const { value: result, done } = iterator.next(value as any);
     return done
       ? RBox.isRBox(result)
-        ? (result as RBox<U>)
-        : RBox.pack<U>(result as U)
-      : result[">>="](step);
+        ? (result as RBox<any>)
+        : RBox.pack<any>(result as any)
+      : (result as RBox<any>)[">>="](step);
   }
 
   return step(undefined as never);
 }
 
+// (gen API removed for simplicity; use RBox.do instead)
 /**
  * RBox utility object containing helpers like `pack`, `set`, and `isRBox`.
  * `pack`、`set`、`isRBox` を含む RBox ユーティリティオブジェクト。
  */
-export const RBox = {
+export const RBox: {
+  do: typeof Do;
+  pack: typeof rbox;
+  set: typeof set;
+  isRBox: typeof isRBox;
+} = {
   do: Do,
   pack: rbox,
   set,
   isRBox,
-} as const;
+};
+
+// Public adapter type for Do's `$` parameter to enable explicit typing when desired.
+// (Adapter type exported at top)

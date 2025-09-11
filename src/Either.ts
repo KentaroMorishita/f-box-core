@@ -11,6 +11,12 @@ type None = null | undefined | void;
 export type Either<L, R> = Left<L, R> | Right<L, R>;
 
 /**
+ * Adapter type for Do's `$` parameter.
+ * `$` は `yield* $(Either.right(...))` のためのアダプタ関数です。
+ */
+export type $Either<L> = <A>(fa: Either<L, A>) => Generator<any, A, any>;
+
+/**
  * Represents a `Left` value, encapsulating an error or invalid result.
  * エラーや無効な結果を包み込む `Left` 型。
  */
@@ -372,26 +378,70 @@ const isRight = <L, R>(value: Either<L, R>): value is Right<L, R> =>
  * @returns An Either containing the final computed value.
  *          計算結果を含む Either を返します。
  */
+// Adapter pattern support for better inference with `yield* $(fa)`.
+const GenEitherSym: unique symbol = Symbol();
+type GenEither<L, A> = {
+  readonly _tag: typeof GenEitherSym;
+  readonly fa: Either<L, A>;
+};
+
+// Overload 1: legacy style (yield Either<L, R>)
 function Do<L, R, U>(
   generatorFunc: () => Generator<Either<L, R>, U | Either<L, U>, R>
-): Either<L, U> {
-  const iterator = generatorFunc();
-  function step(value?: R): Either<L, U> {
+): Either<L, U>;
+// Overload 2: adapter style (yield* $(fa))
+function Do<L, R>(
+  g: (
+    $: <A>(fa: Either<L, A>) => Generator<any, A, any>
+  ) => Generator<any, R, any>
+): Either<L, R>;
+// Implementation
+function Do<L, R>(arg: any): Either<L, R> {
+  if (typeof arg === "function" && arg.length >= 1) {
+    const $ = <A>(fa: Either<L, A>) =>
+      (function* (): Generator<GenEither<L, A>, A, any> {
+        return yield { _tag: GenEitherSym, fa } as any;
+      })();
+
+    const it = arg($);
+    const step = (prev?: unknown): Either<L, R> => {
+      const n = it.next(prev);
+      if (n.done) return Either.pack<L, R>(n.value as R);
+      const y = n.value as GenEither<L, unknown>;
+      return y.fa[">>="](step);
+    };
+    return step(undefined as never);
+  }
+
+  const iterator = (arg as () => Generator<Either<L, R>, any | Either<L, R>, any>)();
+  function step(value?: R): Either<L, R> {
     const { value: result, done } = iterator.next(value as R);
     return done
       ? Either.isEither(result)
-        ? (result as Either<L, U>)
-        : Either.pack<L, U>(result as U)
-      : result[">>="](step);
+        ? (result as Either<L, R>)
+        : Either.pack<L, R>(result as R)
+      : (result as Either<L, R>)[">>="](step);
   }
 
   return step(undefined as never);
 }
+// gen sugar: adapter-first form to improve contextual typing of `$`.
+// (gen API removed for simplicity; use Either.do instead)
 /**
  * A utility object containing constructors and helpers for `Either`.
  * `Either` のコンストラクタおよびヘルパーを含むユーティリティオブジェクト。
  */
-export const Either = {
+export const Either: {
+  do: typeof Do;
+  pack: typeof either;
+  right: typeof right;
+  left: typeof left;
+  tryCatch: typeof tryCatch;
+  isNone: typeof isNone;
+  isEither: typeof isEither;
+  isLeft: typeof isLeft;
+  isRight: typeof isRight;
+} = {
   do: Do,
   pack: either,
   right,
@@ -401,4 +451,7 @@ export const Either = {
   isEither,
   isLeft,
   isRight,
-} as const;
+};
+
+// Public adapter type for Do's `$` parameter to enable explicit typing when desired.
+// (Adapter type exported at top)

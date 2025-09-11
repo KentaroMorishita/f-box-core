@@ -1,4 +1,5 @@
 import { Task } from "../src/Task";
+import type { $Task } from "../src/Task";
 
 describe("Task laws", () => {
   /**
@@ -167,6 +168,26 @@ describe("Task laws", () => {
       await expect(throwingFnTask["<*>"](valueTask).run()).rejects.toThrow(
         "Apply error"
       );
+    });
+  });
+
+  describe("Do notation", () => {
+    test("legacy yield style", async () => {
+      const t = Task.do(function* () {
+        const a: number = yield Task.pack(1);
+        const b: number = yield Task.pack(2);
+        return a + b;
+      });
+      await expect(t.run()).resolves.toBe(3);
+    });
+
+    test("$ adapter with yield*", async () => {
+      const t = Task.do(function* ($: $Task) {
+        const a = yield* $(Task.pack(1));
+        const b = yield* $(Task.pack(a + 2));
+        return a + b; // 1 + 3 = 4
+      });
+      await expect(t.run()).resolves.toBe(4);
     });
   });
 });

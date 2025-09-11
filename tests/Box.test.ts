@@ -1,4 +1,5 @@
 import { Box } from "../src/Box";
+import type { $Box } from "../src/Box";
 
 describe("Box laws", () => {
   /**
@@ -183,6 +184,26 @@ describe("Box laws", () => {
       expect(() => initialBox[">>="](throwingFlatMap).getValue()).toThrowError(
         "FlatMap error"
       );
+    });
+  });
+
+  describe("Do notation", () => {
+    test("legacy yield style", () => {
+      const result = Box.do(function* () {
+        const a: number = yield Box.pack(1);
+        const b: number = yield Box.pack(2);
+        return a + b;
+      });
+      expect(result.getValue()).toBe(3);
+    });
+
+    test("$ adapter with yield*", () => {
+      const result = Box.do(function* ($: $Box) {
+        const a = yield* $(Box.pack(1));
+        const b = yield* $(Box.pack(a + 2));
+        return a + b; // 1 + 3 = 4
+      });
+      expect(result.getValue()).toBe(4);
     });
   });
 });

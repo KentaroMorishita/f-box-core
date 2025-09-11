@@ -61,6 +61,12 @@ export type Task<T> = {
 };
 
 /**
+ * Adapter type for Do's `$` parameter.
+ * `$` は `yield* $(Task.pack(...))` のためのアダプタ関数です。
+ */
+export type $Task = <A>(fa: Task<A>) => Generator<any, A, any>;
+
+/**
  * Creates a new `Task` from an asynchronous computation function.
  * 非同期計算関数から新しい `Task` を作成します。
  * @param fn - A function that performs the asynchronous computation. / 非同期計算を実行する関数。
@@ -145,31 +151,71 @@ const isTask = <T>(value: any): value is Task<T> => value?.isTask === true;
  * @returns A Task containing the final computed value.
  *          計算結果を含む Task を返します。
  */
+// Adapter pattern support for better inference with `yield* $(fa)`.
+const GenTaskSym: unique symbol = Symbol();
+type GenTask<A> = { readonly _tag: typeof GenTaskSym; readonly fa: Task<A> };
+
+// Overload 1: legacy style (yield Task<T>)
 function Do<T, U>(
   generatorFunc: () => Generator<Task<T>, U | Task<U>, T>
-): Task<U> {
-  const iterator = generatorFunc();
-  function step(value?: T): Task<U> {
-    const { value: result, done } = iterator.next(value as T);
+): Task<U>;
+// Overload 2: adapter style (yield* $(fa))
+function Do<R>(
+  g: (
+    $: <A>(fa: Task<A>) => Generator<any, A, any>
+  ) => Generator<any, R, any>
+): Task<R>;
+// Implementation
+function Do(arg: any): Task<any> {
+  if (typeof arg === "function" && arg.length >= 1) {
+    const $ = <A>(fa: Task<A>) =>
+      (function* (): Generator<GenTask<A>, A, any> {
+        return yield { _tag: GenTaskSym, fa } as any;
+      })();
+
+    const it = arg($);
+    const step = (prev?: unknown): Task<any> => {
+      const n = it.next(prev);
+      if (n.done) return Task.pack<any>(n.value as any);
+      const y = n.value as GenTask<unknown>;
+      return y.fa[">>="](step);
+    };
+    return step(undefined as never);
+  }
+
+  const iterator = (arg as () => Generator<Task<any>, any | Task<any>, any>)();
+  function step(value?: any): Task<any> {
+    const { value: result, done } = iterator.next(value as any);
     return done
       ? Task.isTask(result)
-        ? (result as Task<U>)
-        : Task.pack<U>(result as U)
-      : result[">>="](step);
+        ? (result as Task<any>)
+        : Task.pack<any>(result as any)
+      : (result as Task<any>)[">>="](step);
   }
 
   return step(undefined as never);
 }
 
+// (gen API removed for simplicity; use Task.do instead)
 /**
  * Task utility object containing constructors and helper functions.
  * コンストラクタとヘルパー関数を含む `Task` ユーティリティオブジェクト。
  */
-export const Task = {
+export const Task: {
+  do: typeof Do;
+  from: typeof task;
+  pack: typeof lift;
+  tryCatch: typeof tryCatch;
+  tryTask: typeof tryTask;
+  isTask: typeof isTask;
+} = {
   do: Do,
   from: task,
   pack: lift,
   tryCatch,
   tryTask,
   isTask,
-} as const;
+};
+
+// Public adapter type for Do's `$` parameter to enable explicit typing when desired.
+// (Adapter type exported at top)

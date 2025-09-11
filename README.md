@@ -264,6 +264,8 @@ console.log(result2); // "DEFAULT"
 #### Real-world Example: Safe API Data Processing
 
 ```typescript
+import type { $Maybe } from "f-box-core";
+
 interface UserProfile {
   id: number;
   name?: string;
@@ -284,9 +286,9 @@ const getUserDisplayName = (profile: UserProfile) =>
 
 // Do notation for the same processing (simple string types only)
 const getUserDisplayNameDo = (profile: UserProfile) =>
-  Maybe.do<string, string>(function*() {
-    const name = yield Maybe.pack(profile.name);
-    const bio = yield Maybe.pack(profile.bio);
+  Maybe.do(function* ($: $Maybe) {
+    const name = yield* $(Maybe.pack(profile.name));
+    const bio = yield* $(Maybe.pack(profile.bio));
     const cleanName = name.trim();
     const displayName = cleanName.length > 0 ? cleanName : "Anonymous";
     return `${displayName} - ${bio}`;
