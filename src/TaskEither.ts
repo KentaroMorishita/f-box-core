@@ -13,18 +13,21 @@ export type TaskEither<L, R> = {
   /**
    * Maps the `Right` value with the provided function.
    * 右側の値に関数を適用します。
+   * @param fn - A function to transform the `Right` value. / `Right` の値を変換する関数。
    */
   readonly map: <U>(fn: (value: R) => U) => TaskEither<L, U>;
 
   /**
    * Alias of `map`.
    * `map` のエイリアス。
+   * @param fn - A function to transform the `Right` value. / `Right` の値を変換する関数。
    */
   readonly "<$>": <U>(fn: (value: R) => U) => TaskEither<L, U>;
 
   /**
    * Applies a function inside `Right` to a value inside another `TaskEither`.
    * 右側に入った関数を別の `TaskEither` の右側の値に適用します。
+   * @param boxValue - A `TaskEither` containing the value. / 値を含む `TaskEither`。
    */
   readonly apply: <A, B>(
     this: TaskEither<L, (a: A) => B>,
@@ -34,6 +37,7 @@ export type TaskEither<L, R> = {
   /**
    * Alias of `apply`.
    * `apply` のエイリアス。
+   * @param boxValue - A `TaskEither` containing the value. / 値を含む `TaskEither`。
    */
   readonly "<*>": <A, B>(
     this: TaskEither<L, (a: A) => B>,
@@ -43,12 +47,14 @@ export type TaskEither<L, R> = {
   /**
    * Binds the `Right` value to the next computation.
    * 右側の値を次の計算へ渡します。
+   * @param fn - A function returning `TaskEither`. / `TaskEither` を返す関数。
    */
   readonly flatMap: <U>(fn: (value: R) => TaskEither<L, U>) => TaskEither<L, U>;
 
   /**
    * Alias of `flatMap`.
    * `flatMap` のエイリアス。
+   * @param fn - A function returning `TaskEither`. / `TaskEither` を返す関数。
    */
   readonly ">>=": <U>(fn: (value: R) => TaskEither<L, U>) => TaskEither<L, U>;
 
@@ -67,6 +73,8 @@ export type TaskEither<L, R> = {
   /**
    * Pattern matches on `Left` or `Right` asynchronously, returning a `Task<U>`.
    * `Left` または `Right` をパターンマッチし、`Task<U>` を返します。
+   * @param onLeft - Handler for `Left`. / `Left` の処理関数。
+   * @param onRight - Handler for `Right`. / `Right` の処理関数。
    */
   readonly match: <U>(onLeft: (l: L) => U, onRight: (r: R) => U) => Task<U>;
 };
@@ -78,8 +86,9 @@ export type TaskEither<L, R> = {
 export type $TaskEither<L> = <A>(fa: TaskEither<L, A>) => Generator<any, A, any>;
 
 /**
- * Internal constructor from `Task<Either<L, R>>`.
+ * Creates a `TaskEither` from a `Task<Either<L, R>>`.
  * `Task<Either<L, R>>` から `TaskEither<L, R>` を作成します。
+ * @param fa - A task producing an Either. / `Either` を生成する `Task`。
  */
 const from = <L, R>(fa: Task<Either<L, R>>): TaskEither<L, R> => {
   const map = <U>(fn: (value: R) => U): TaskEither<L, U> =>
@@ -131,15 +140,17 @@ const from = <L, R>(fa: Task<Either<L, R>>): TaskEither<L, R> => {
 };
 
 /**
- * Lifts a `Right` value into `TaskEither`.
- * `Right` の値を `TaskEither` に持ち上げます。
+ * Lifts a value into `TaskEither` as `Right`.
+ * 値を `Right` として `TaskEither` に持ち上げます。
+ * @param value - The value to lift. / 持ち上げる値。
  */
 const right = <L, R>(value: R): TaskEither<L, R> =>
   from(TaskMod.pack(EitherMod.right<L, R>(value)));
 
 /**
- * Lifts a `Left` value into `TaskEither`.
- * `Left` の値を `TaskEither` に持ち上げます。
+ * Lifts an error into `TaskEither` as `Left`.
+ * エラーを `Left` として `TaskEither` に持ち上げます。
+ * @param value - The error value. / エラー値。
  */
 const left = <L, R = never>(value: L): TaskEither<L, R> =>
   from(TaskMod.pack(EitherMod.left<L, R>(value)));
@@ -147,6 +158,7 @@ const left = <L, R = never>(value: L): TaskEither<L, R> =>
 /**
  * Lifts a `Task<R>` into `TaskEither<L, R>` as `Right`.
  * `Task<R>` を `Right` として `TaskEither<L, R>` に持ち上げます。
+ * @param task - The task to lift. / 持ち上げる `Task`。
  */
 const fromTask = <L, R>(task: Task<R>): TaskEither<L, R> =>
   from(task.map((r) => EitherMod.right<L, R>(r)));
@@ -154,13 +166,117 @@ const fromTask = <L, R>(task: Task<R>): TaskEither<L, R> =>
 /**
  * Lifts an `Either<L, R>` into `TaskEither<L, R>`.
  * `Either<L, R>` を `TaskEither<L, R>` に持ち上げます。
+ * @param e - The either to lift. / 持ち上げる `Either`。
  */
 const fromEither = <L, R>(e: Either<L, R>): TaskEither<L, R> =>
   from(TaskMod.pack(e));
 
 /**
- * Creates a `TaskEither` that runs the computation and captures errors as `Left`.
- * 計算を実行し、エラーを `Left` として捕捉する `TaskEither` を作成します。
+ * Runs TaskEithers in parallel and combines results.
+ * If any result is Left, returns the first Left (by array order) after all complete.
+ * 複数の TaskEither を並列実行し、結果を結合します。1つでも Left があれば、配列順で最初の Left を返します（全完了後判定）。
+ * @param tasks - TaskEithers to run in parallel. / 並列実行する TaskEither 配列。
+ */
+const all = <L, R>(tasks: readonly TaskEither<L, R>[]): TaskEither<L, R[]> =>
+  from(
+    TaskMod.from(async () => {
+      const results = await Promise.all(tasks.map((te) => te.toTask().run()));
+      for (const r of results) {
+        if (r.isLeft) return EitherMod.left<L, R[]>(r.getValue());
+      }
+      return EitherMod.right<L, R[]>(results.map((r) => r.getValue() as R));
+    })
+  );
+
+/**
+ * Runs TaskEithers in parallel and returns all raw results without short-circuiting.
+ * Promise.all に類似し、全件の `Either` を `Task` で返します（ショートサーキットなし）。
+ * @param tasks - TaskEithers to run in parallel. / 並列実行する TaskEither 配列。
+ */
+const allSettled = <L, R>(
+  tasks: readonly TaskEither<L, R>[]
+): Task<Either<L, R>[]> => TaskMod.from(() => Promise.all(tasks.map((te) => te.toTask().run())));
+
+/**
+ * Partitions results into lefts and rights without short-circuiting.
+ * 結果を Left/Right に仕分けして返します（ショートサーキットなし）。
+ * @param tasks - TaskEithers to run in parallel. / 並列実行する TaskEither 配列。
+ */
+const partition = <L, R>(
+  tasks: readonly TaskEither<L, R>[]
+): Task<[L[], R[]]> =>
+  TaskMod.from(async () => {
+    const results = await Promise.all(tasks.map((te) => te.toTask().run()));
+    const lefts: L[] = [];
+    const rights: R[] = [];
+    for (const r of results) {
+      if (r.isLeft) lefts.push(r.getValue());
+      else rights.push(r.getValue());
+    }
+    return [lefts, rights];
+  });
+
+/**
+ * Validates all TaskEithers: accumulates all errors if any, otherwise returns all successes.
+ * すべて成功すれば `Right(values[])`、1件以上失敗があれば `Left(errors[])` を返します。
+ * @param tasks - TaskEithers to run in parallel. / 並列実行する TaskEither 配列。
+ */
+const validateAll = <L, R>(
+  tasks: readonly TaskEither<L, R>[]
+): TaskEither<L[], R[]> =>
+  from(
+    TaskMod.from(async () => {
+      const results = await Promise.all(tasks.map((te) => te.toTask().run()));
+      const lefts: L[] = [];
+      const rights: R[] = [];
+      for (const r of results) {
+        if (r.isLeft) lefts.push(r.getValue());
+        else rights.push(r.getValue());
+      }
+      return lefts.length > 0
+        ? EitherMod.left<L[], R[]>(lefts)
+        : EitherMod.right<L[], R[]>(rights);
+    })
+  );
+
+/**
+ * Traverses an array with a TaskEither-returning function and sequences the results.
+ * 配列の各要素に関数を適用し、`TaskEither` を順に合成します。
+ * @param as - Input array. / 入力配列。
+ * @param f - Mapping function returning TaskEither. / TaskEither を返す関数。
+ */
+const traverse = <L, A, B>(
+  as: readonly A[],
+  f: (a: A) => TaskEither<L, B>
+): TaskEither<L, B[]> => all(as.map(f));
+
+/**
+ * Sequences a record of TaskEithers into a TaskEither of record.
+ * レコードの TaskEither を、同構造の値のレコードへ順序付けします。
+ * @param obj - A record of TaskEithers. / TaskEither のレコード。
+ */
+const struct = <L, T extends Record<string, TaskEither<L, any>>>(
+  obj: T
+): TaskEither<L, { [K in keyof T]: T[K] extends TaskEither<L, infer R> ? R : never }> =>
+  from(
+    TaskMod.from(async () => {
+      const keys = Object.keys(obj);
+      const tasks = Object.values(obj).map((te) => te.run());
+      const results = await Promise.all(tasks);
+
+      const out: any = {};
+      for (let i = 0; i < results.length; i++) {
+        const r = results[i] as Either<L, unknown>;
+        if (r.isLeft) return EitherMod.left<L, any>(r.getValue());
+        out[keys[i]] = r.getValue();
+      }
+      return EitherMod.right(out);
+    })
+  );
+
+/**
+ * Creates a `TaskEither` that runs the computation, capturing thrown/rejected errors as `Left` via `onError`.
+ * 計算を実行し、投げられた/拒否されたエラーを `onError` で `Left` に変換します。
  */
 const tryCatch = <L, R>(
   fn: () => R | Promise<R>,
@@ -177,7 +293,7 @@ const tryCatch = <L, R>(
 
 /**
  * Type guard to check if a value is `TaskEither`.
- * 値が `TaskEither` かどうかを判定するタイプガード。
+ * 値が `TaskEither` かどうかを判定します。
  */
 const isTaskEither = <L, R>(value: any): value is TaskEither<L, R> =>
   value?.isTaskEither === true;
@@ -242,6 +358,12 @@ export const TaskEither: {
   pack: typeof right;
   right: typeof right;
   left: typeof left;
+  all: typeof all;
+  allSettled: typeof allSettled;
+  partition: typeof partition;
+  validateAll: typeof validateAll;
+  traverse: typeof traverse;
+  struct: typeof struct;
   fromTask: typeof fromTask;
   fromEither: typeof fromEither;
   tryCatch: typeof tryCatch;
@@ -252,6 +374,12 @@ export const TaskEither: {
   pack: right,
   right,
   left,
+  all,
+  allSettled,
+  partition,
+  validateAll,
+  traverse,
+  struct,
   fromTask,
   fromEither,
   tryCatch,

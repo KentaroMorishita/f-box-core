@@ -50,7 +50,7 @@ export type Task<T> = {
    * 関数を含む `Task` を値を含む別の `Task` に適用し、新しい `Task` を返します。
    * `apply` のエイリアス。
    * @param taskValue - A `Task` containing the value. / 値を含む `Task`。
-   */
+    */
   readonly "<*>": <U, V>(taskValue: Task<U>) => Task<V>;
 
   /**
@@ -136,6 +136,13 @@ const tryTask = <T>(fn: () => T | Promise<T>): Task<T> =>
 const lift = <T>(value: T): Task<T> => task(() => Promise.resolve(value));
 
 /**
+ * Runs multiple Tasks in parallel and collects their results like Promise.all.
+ * 複数の Task を並列に実行し、結果を配列として収集します（Promise.all 相当）。
+ */
+const all = <T>(tasks: readonly Task<T>[]): Task<T[]> =>
+  task(() => Promise.all(tasks.map((t) => t.run())));
+
+/**
  * Checks if the given value is a `Task`.
  * 指定された値が `Task` かどうかを判定します。
  * @param value - The value to check. / 判定する値。
@@ -205,6 +212,7 @@ export const Task: {
   do: typeof Do;
   from: typeof task;
   pack: typeof lift;
+  all: typeof all;
   tryCatch: typeof tryCatch;
   tryTask: typeof tryTask;
   isTask: typeof isTask;
@@ -212,6 +220,7 @@ export const Task: {
   do: Do,
   from: task,
   pack: lift,
+  all,
   tryCatch,
   tryTask,
   isTask,
