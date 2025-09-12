@@ -21,4 +21,8 @@ describe("Main exports", () => {
   test("should export Task utilities", () => {
     expect(Main.Task).toBeDefined();
   });
+
+  test("should export TaskEither utilities", () => {
+    expect((Main as any).TaskEither).toBeDefined();
+  });
 });
